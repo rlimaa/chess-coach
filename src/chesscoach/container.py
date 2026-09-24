@@ -10,6 +10,7 @@ from chesscoach.adapters.chess_rules.board_rules import PythonChessRules
 from chesscoach.adapters.chess_rules.clock_reader import PgnClockReader
 from chesscoach.adapters.chess_rules.pgn_replayer import PgnReplayer
 from chesscoach.adapters.chesscom.client import ChessComClient
+from chesscoach.adapters.coaching.repertoire_file import JsonRepertoireFile
 from chesscoach.adapters.coaching.training_plan_file import MarkdownTrainingPlanFile
 from chesscoach.adapters.engine.caching import CachingEngine
 from chesscoach.adapters.engine.diagnostics import EngineProbe, probe_engine
@@ -34,6 +35,7 @@ from chesscoach.application.use_cases.puzzles import (
     NextPuzzles,
     SolvePuzzle,
 )
+from chesscoach.application.use_cases.repertoire import GetRepertoire
 from chesscoach.application.use_cases.review_game import ReviewGame
 from chesscoach.application.use_cases.show_games import RecentGames, ShowGame
 from chesscoach.application.use_cases.sync_games import SyncGames
@@ -150,6 +152,9 @@ class Container:
             games=SqliteGameRepository(self._database),
             analyses=SqliteAnalysisRepository(self._database),
         )
+
+    def get_repertoire(self) -> GetRepertoire:
+        return GetRepertoire(JsonRepertoireFile(self.settings.repertoire_path), PythonChessRules())
 
     def get_training_plan(self) -> GetTrainingPlan:
         return GetTrainingPlan(MarkdownTrainingPlanFile(self.settings.training_plan_path))

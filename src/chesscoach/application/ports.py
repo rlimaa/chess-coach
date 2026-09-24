@@ -4,6 +4,8 @@ from typing import Protocol
 from chesscoach.application.dto import (
     ArchiveMonth,
     EngineLine,
+    LineMove,
+    RepertoireEntry,
     ReplayedGame,
     TrainingPlan,
     Variation,
@@ -79,6 +81,10 @@ class ChessRules(Protocol):
 
     def render(self, fen: str, perspective: Color) -> str: ...
 
+    def play_line(self, moves: Sequence[str]) -> tuple[LineMove, ...]:
+        """Positions after each move from the start; InvalidMoveError on an illegal move."""
+        ...
+
 
 class PuzzleAttempts(Protocol):
     def record(self, attempt: Attempt) -> None: ...
@@ -98,3 +104,7 @@ class LineEngine(Protocol):
     ) -> Variation:
         """Engine line from the position; when first_move_san is given, the line starts with it."""
         ...
+
+
+class RepertoireSource(Protocol):
+    def entries(self) -> list[RepertoireEntry]: ...

@@ -907,6 +907,118 @@ function lineBlock(name, title, variation, startPly) {
   </div>`;
 }
 
+const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+async function renderOpenings() {
+  const main = document.getElementById("main");
+  main.innerHTML = renderLoading();
+  const response = await fetch("/api/openings");
+  if (!response.ok) {
+    const detail = (await response.json().catch(() => ({}))).detail || `HTTP ${response.status}`;
+    main.innerHTML = renderError(`Could not load the repertoire: ${esc(detail)}`);
+    return;
+  }
+  const openings = await response.json();
+  if (!openings.length) {
+    main.innerHTML = `<div class="view-container"><div class="empty-state">
+      No opening lines yet. Ask Claude for a check-in and it will add your repertoire changes.</div></div>`;
+    return;
+  }
+
+  main.innerHTML = `<div class="view-container openings-view">
+    <div class="opening-list">${openings.map((o, i) => `
+      <button class="opening-card" data-i="${i}" type="button">
+        <span class="opening-badges"><span class="badge side-${o.side}">${o.side}</span>
+          <span class="badge ${o.focus ? "focus" : "later"}">${o.focus ? "Focus" : "Later"}</span></span>
+        <span class="opening-title">${esc(o.title)}</span>
+      </button>`).join("")}
+    </div>
+    <div class="opening-study">
+      <div class="puzzle-board">
+        <div id="openingBoard" class="board"></div>
+        <div class="board-controls">${NAV_BUTTONS}</div>
+      </div>
+      <div class="opening-panel">
+        <div class="segmented-control line-toggle">
+          <button data-mode="new" type="button">Recommended</button>
+          <button data-mode="old" type="button">Your old line</button>
+        </div>
+        <div id="openingMoves" class="opening-moves"></div>
+        <div id="openingNotes" class="opening-notes"></div>
+      </div>
+    </div>
+  </div>`;
+
+  if (cg.openingInstance) cg.openingInstance.destroy();
+  cg.openingInstance = Chessground(document.getElementById("openingBoard"), {
+    fen: START_FEN,
+    coordinates: true,
+    viewOnly: true,
+  });
+
+  let opening = null;
+  let mode = "new";
+  let current = 0;
+  const moves = () => (mode === "new" ? opening.moves : opening.old_moves);
+  const fenAt = (idx) => (idx === 0 ? START_FEN : moves()[idx - 1].fen);
+
+  const goTo = (idx) => {
+    current = Math.max(0, Math.min(moves().length, idx));
+    cg.openingInstance.set({ fen: fenAt(current), lastMove: undefined });
+    main.querySelectorAll(".opening-moves .move.current").forEach((el) => el.classList.remove("current"));
+    main.querySelector(`.opening-moves .move[data-idx="${current}"]`)?.classList.add("current");
+  };
+
+  const renderLine = () => {
+    const keyClass = mode === "new" ? "key-new" : "key-old";
+    const rows = [];
+    moves().forEach((m, i) => {
+      const number = i % 2 === 0 ? `<span class="move-num">${i / 2 + 1}.</span>` : "";
+      const key = i === opening.key_ply ? ` ${keyClass}` : "";
+      rows.push(`${number}<span class="move${key}" data-idx="${i + 1}">${esc(m.san)}</span>`);
+    });
+    document.getElementById("openingMoves").innerHTML = rows.join(" ");
+    main.querySelectorAll(".opening-moves .move").forEach((el) =>
+      el.addEventListener("click", () => goTo(Number(el.dataset.idx)))
+    );
+    main.querySelectorAll(".line-toggle button").forEach((b) =>
+      b.classList.toggle("active", b.dataset.mode === mode)
+    );
+    const key = moves()[opening.key_ply];
+    document.getElementById("openingKey").innerHTML = key
+      ? `<strong>${mode === "new" ? "Key move" : "Where it goes wrong"}:</strong> ${moveLabel(opening.key_ply)} ${esc(key.san)}`
+      : "";
+    goTo(Math.min(opening.key_ply + 1, moves().length));
+  };
+
+  const select = (i) => {
+    opening = openings[i];
+    mode = "new";
+    main.querySelectorAll(".opening-card").forEach((c) => c.classList.toggle("active", Number(c.dataset.i) === i));
+    cg.openingInstance.set({ orientation: opening.side });
+    main.querySelector('.line-toggle button[data-mode="old"]').hidden = opening.old_moves.length === 0;
+    document.getElementById("openingNotes").innerHTML = `
+      <p id="openingKey"></p>
+      <p><strong>Why:</strong> ${esc(opening.why)}</p>
+      <p><strong>Plan:</strong> ${esc(opening.plan)}</p>
+      ${opening.instead_result ? `<p class="muted">Your old line: ${esc(opening.instead_result)}</p>` : ""}
+      <p class="muted">← → step through the moves, ↑ start, ↓ end. Click any move to jump to it.</p>`;
+    renderLine();
+  };
+
+  main.querySelectorAll(".opening-card").forEach((c) => c.addEventListener("click", () => select(Number(c.dataset.i))));
+  main.querySelectorAll(".line-toggle button").forEach((b) =>
+    b.addEventListener("click", () => {
+      mode = b.dataset.mode;
+      renderLine();
+    })
+  );
+  const nav = { first: () => goTo(0), prev: () => goTo(current - 1), next: () => goTo(current + 1), last: () => goTo(moves().length) };
+  main.querySelectorAll("[data-nav]").forEach((b) => b.addEventListener("click", nav[b.dataset.nav]));
+  bindMoveKeys(nav);
+  select(0);
+}
+
 async function renderTraining() {
   const main = document.getElementById("main");
   main.innerHTML = renderLoading();
@@ -1120,6 +1232,8 @@ async function routeTo(route) {
       renderPuzzles();
       await loadPuzzles();
       renderPuzzles();
+    } else if (view === "openings") {
+      await renderOpenings();
     } else if (view === "training") {
       await renderTraining();
     } else if (view === "progress") {

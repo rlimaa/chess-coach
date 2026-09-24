@@ -1,5 +1,9 @@
+from collections.abc import Sequence
+
 import chess
 
+from chesscoach.application.dto import LineMove
+from chesscoach.application.errors import InvalidMoveError
 from chesscoach.domain.value_objects import Color
 
 
@@ -29,6 +33,20 @@ class PythonChessRules:
             pass
 
         return None
+
+    def play_line(self, moves: Sequence[str]) -> tuple[LineMove, ...]:
+        board = chess.Board()
+        line: list[LineMove] = []
+        for san in moves:
+            label = f"{board.fullmove_number}{'.' if board.turn is chess.WHITE else '...'} {san}"
+            try:
+                move = board.parse_san(san)
+            except ValueError as error:
+                raise InvalidMoveError(f"Illegal move {label}") from error
+            san_played = board.san(move)
+            board.push(move)
+            line.append(LineMove(san_played, board.fen()))
+        return tuple(line)
 
     def render(self, fen: str, perspective: Color) -> str:
         board = chess.Board(fen)

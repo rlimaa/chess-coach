@@ -2,7 +2,15 @@
 
 from collections.abc import Iterable, Sequence
 
-from chesscoach.application.dto import ArchiveMonth, EngineLine, ReplayedGame, Variation
+from chesscoach.application.dto import (
+    ArchiveMonth,
+    EngineLine,
+    LineMove,
+    RepertoireEntry,
+    ReplayedGame,
+    Variation,
+)
+from chesscoach.application.errors import InvalidMoveError
 from chesscoach.domain.entities import Game, GameAnalysis
 from chesscoach.domain.insights import Highlight, TimeClassInsights
 from chesscoach.domain.puzzles import Attempt
@@ -127,6 +135,11 @@ class FakeChessRules:
     def render(self, fen: str, perspective: Color) -> str:
         return f"board {fen} as {perspective.value}"
 
+    def play_line(self, moves: Sequence[str]) -> tuple[LineMove, ...]:
+        if "??" in moves:
+            raise InvalidMoveError(f"Illegal move {moves.index('??') + 1}")
+        return tuple(LineMove(san, f"fen-{i}") for i, san in enumerate(moves))
+
 
 class InMemoryPuzzleAttempts:
     def __init__(self) -> None:
@@ -149,3 +162,11 @@ class FakeLineEngine:
     ) -> Variation:
         self.calls.append((fen, first_move_san))
         return self._lines[first_move_san or ""]
+
+
+class FakeRepertoire:
+    def __init__(self, entries: list[RepertoireEntry]) -> None:
+        self._entries = entries
+
+    def entries(self) -> list[RepertoireEntry]:
+        return self._entries

@@ -11,7 +11,8 @@ analyzed with Stockfish), never on generic tips alone. Be concrete: cite games, 
 - `reports/`: generated coaching reports (gitignored).
 
 ## Coaching workflow
-Personal coaching files live in `coaching/` (gitignored): `training_plan.md` and `checkins/<date>.md`.
+Personal coaching files live in `coaching/` (gitignored): `training_plan.md`, `repertoire.json` and
+`checkins/<date>.md`.
 
 When the user asks for coaching, a check-in or "what should I work on":
 1. `make sync`, then `docker compose run --rm coach report` (rapid + blitz). Read both reports in
@@ -27,7 +28,11 @@ When the user asks for coaching, a check-in or "what should I work on":
    - Drills: `coach puzzles -t <class>` sessions (they come from the user's own mistakes), plus
      specific habits such as a clock rule or which opening line to study.
    - Log: date and a one-line result of each check-in.
-5. Write the check-in summary to `coaching/checkins/<date>.md` and tell the user the 3 most
+5. Keep `coaching/repertoire.json` in sync with the plan's opening changes. The dashboard's Openings
+   tab shows each line on a board: `line` and `instead_of` are space-separated SAN from the start
+   position, `key_ply` is the 0-based index of the move that changes, `focus` marks this month's
+   lines. After editing, check `GET /api/openings` returns 200 (it rejects illegal moves).
+6. Write the check-in summary to `coaching/checkins/<date>.md` and tell the user the 3 most
    important points.
 
 Prefer few, concrete, measurable changes over long advice lists. Reuse `coach puzzles --list`

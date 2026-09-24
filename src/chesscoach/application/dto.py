@@ -177,3 +177,24 @@ class LineSearch:
 class PuzzleExplanation:
     best: Variation
     attempted: Variation | None
+
+
+@dataclass(frozen=True, slots=True)
+class RepertoireEntry:
+    id: str
+    title: str
+    side: Color
+    focus: bool
+    line: tuple[str, ...]
+    key_ply: int
+    why: str
+    plan: str
+    instead_of: tuple[str, ...] = ()
+    instead_result: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class OpeningLine:
+    entry: RepertoireEntry
+    moves: tuple[LineMove, ...]
+    old_moves: tuple[LineMove, ...]

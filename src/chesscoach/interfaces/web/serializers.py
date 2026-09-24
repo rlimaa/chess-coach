@@ -4,6 +4,7 @@ from chesscoach.application.dto import (
     GameDetail,
     GameSummary,
     InsightsBundle,
+    OpeningLine,
     PeriodMetrics,
     ProgressReport,
     PuzzleExplanation,
@@ -318,4 +319,20 @@ def explanation(explained: PuzzleExplanation) -> dict[str, object]:
     return {
         "best": _variation(explained.best),
         "attempted": _variation(explained.attempted) if explained.attempted else None,
+    }
+
+
+def opening(line: OpeningLine) -> dict[str, object]:
+    entry = line.entry
+    return {
+        "id": entry.id,
+        "title": entry.title,
+        "side": entry.side.value,
+        "focus": entry.focus,
+        "key_ply": entry.key_ply,
+        "why": entry.why,
+        "plan": entry.plan,
+        "instead_result": entry.instead_result,
+        "moves": [{"san": m.san, "fen": m.fen_after} for m in line.moves],
+        "old_moves": [{"san": m.san, "fen": m.fen_after} for m in line.old_moves],
     }

@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     db_path: Path = Path("data/coach.db")
     reports_dir: Path = Path("reports")
     training_plan_path: Path = Path("coaching/training_plan.md")
+    repertoire_path: Path = Path("coaching/repertoire.json")
     timezone: ZoneInfo = ZoneInfo("UTC")
     engine: EngineSettings = EngineSettings()
 

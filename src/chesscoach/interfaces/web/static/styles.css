@@ -916,3 +916,33 @@ cg-board square.move-dest { background: radial-gradient(rgba(0, 0, 0, 0.14) 22%,
 .line-move:hover { background: var(--surface); }
 .line-move.current { background: color-mix(in srgb, var(--series-1) 22%, transparent); }
 .line-exit { justify-self: start; }
+
+.openings-view { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 24px; align-items: start; }
+.opening-list { display: grid; gap: 8px; }
+.opening-card { display: grid; gap: 6px; text-align: left; padding: 12px; border-radius: 12px; border: 1px solid var(--grid);
+  background: var(--surface-2); color: var(--text); cursor: pointer; font: inherit; }
+.opening-card:hover { border-color: var(--text-2); }
+.opening-card.active { border-color: var(--series-1); box-shadow: inset 3px 0 0 var(--series-1); }
+.opening-title { font-weight: 600; line-height: 1.35; }
+.opening-badges { display: flex; gap: 6px; }
+.badge { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--surface); color: var(--text-2); }
+.badge.focus { color: var(--series-1); }
+.opening-study { display: grid; grid-template-columns: minmax(0, 480px) minmax(240px, 1fr); gap: 24px; align-items: start; }
+.opening-study > * { min-width: 0; }
+.line-toggle { margin-bottom: 12px; }
+.line-toggle button.active { background: var(--series-1); color: #fff; }
+.opening-moves { line-height: 2; margin-bottom: 12px; }
+.opening-moves .move.key-new { box-shadow: inset 0 -2px 0 var(--good); font-weight: 600; }
+.opening-moves .move.key-old { box-shadow: inset 0 -2px 0 var(--critical); font-weight: 600; }
+.opening-notes p { margin: 0 0 8px; line-height: 1.5; }
+@media (max-width: 1000px) {
+  .openings-view, .opening-study { grid-template-columns: minmax(0, 1fr); }
+  .opening-list { grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); overflow-x: auto; }
+}
+
+.line-toggle { display: inline-flex; gap: 4px; padding: 3px; border-radius: 10px; background: var(--surface-2); }
+.line-toggle button { border: 0; background: transparent; color: var(--text-2); padding: 5px 12px; border-radius: 8px; font: inherit; font-size: 13px; cursor: pointer; }
+.line-toggle button:hover { color: var(--text); }
+.line-toggle button.active { background: var(--series-1); color: #fff; }
+.app-nav { display: flex; flex-wrap: wrap; justify-content: center; column-gap: 16px; row-gap: 6px; }
+.header-content { min-width: 0; max-width: 100%; }

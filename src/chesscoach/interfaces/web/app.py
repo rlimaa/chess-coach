@@ -2,7 +2,7 @@ import hashlib
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import APIRouter, FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -10,12 +10,15 @@ from pydantic import BaseModel
 from chesscoach.application.errors import (
     GameNotFoundError,
     InvalidMoveError,
+    InvalidRepertoireError,
     PuzzleNotAttemptedError,
     PuzzleNotFoundError,
 )
 from chesscoach.container import Container
 from chesscoach.domain.value_objects import TimeClass
 from chesscoach.interfaces.web import serializers
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 class AnswerModel(BaseModel):
@@ -28,8 +31,27 @@ def create_app(container: Container) -> FastAPI:
         raise ValueError("CHESSCOM_USERNAME is required")
 
     app = FastAPI()
+    for router in (
+        _insight_routes(container, username),
+        _game_routes(container, username),
+        _puzzle_routes(container, username),
+        _coaching_routes(container),
+    ):
+        app.include_router(router, prefix="/api")
+    app.middleware("http")(_revalidate_static)
+    app.mount("/static", StaticFiles(directory=STATIC_DIR, check_dir=False), name="static")
 
-    @app.get("/api/meta")
+    @app.get("/")
+    def get_dashboard() -> HTMLResponse:
+        return HTMLResponse(_versioned_index(STATIC_DIR))
+
+    return app
+
+
+def _insight_routes(container: Container, username: str) -> APIRouter:
+    router = APIRouter()
+
+    @router.get("/meta")
     def get_meta() -> dict[str, object]:
         by_class = container.get_stats().execute(username).by_time_class
         ranked = sorted(by_class.items(), key=lambda item: item[1].summary.games, reverse=True)
@@ -40,14 +62,25 @@ def create_app(container: Container) -> FastAPI:
             ],
         }
 
-    @app.get("/api/insights/{time_class}")
+    @router.get("/insights/{time_class}")
     def get_insights(time_class: TimeClass) -> dict[str, object]:
         bundle = container.build_insights().execute(username, time_class)
         if bundle is None:
             raise HTTPException(status_code=404, detail="No games in this time class")
         return serializers.insights(bundle)
 
-    @app.get("/api/games")
+    @router.get("/progress/{time_class}")
+    def get_progress(time_class: TimeClass, days: int = 30) -> dict[str, object]:
+        report = container.compare_progress().execute(username, time_class, days)
+        return serializers.progress(report)
+
+    return router
+
+
+def _game_routes(container: Container, username: str) -> APIRouter:
+    router = APIRouter()
+
+    @router.get("/games")
     def list_games(
         time_class: TimeClass | None = None, limit: int = 50, offset: int = 0
     ) -> list[dict[str, object]]:
@@ -56,7 +89,7 @@ def create_app(container: Container) -> FastAPI:
         )
         return [serializers.game_summary(gs) for gs in summaries]
 
-    @app.get("/api/games/{reference:path}")
+    @router.get("/games/{reference:path}")
     def get_game(reference: str) -> dict[str, object]:
         try:
             detail = container.show_game().execute(reference)
@@ -64,23 +97,28 @@ def create_app(container: Container) -> FastAPI:
             raise HTTPException(status_code=404, detail="Game not found") from e
         return serializers.game_detail(detail)
 
-    @app.get("/api/puzzles")
+    return router
+
+
+def _puzzle_routes(container: Container, username: str) -> APIRouter:
+    router = APIRouter()
+
+    @router.get("/puzzles")
     def list_puzzles(
         time_class: TimeClass | None = None, limit: int = 10
     ) -> list[dict[str, object]]:
         puzzles = container.next_puzzles().execute(username, time_class=time_class, limit=limit)
         return [serializers.puzzle(p) for p in puzzles]
 
-    @app.post("/api/puzzles/{puzzle_id}/answer")
+    @router.post("/puzzles/{puzzle_id}/answer")
     def answer_puzzle(puzzle_id: str, body: AnswerModel) -> dict[str, bool | str | None]:
         try:
             puzzle = container.find_puzzle().execute(puzzle_id)
         except PuzzleNotFoundError as e:
             raise HTTPException(status_code=404, detail="Puzzle not found") from e
-        result = container.solve_puzzle().execute(puzzle, body.move)
-        return serializers.puzzle_result(result)
+        return serializers.puzzle_result(container.solve_puzzle().execute(puzzle, body.move))
 
-    @app.get("/api/puzzles/{puzzle_id}/explanation")
+    @router.get("/puzzles/{puzzle_id}/explanation")
     def explain_puzzle(puzzle_id: str, move: str) -> dict[str, object]:
         try:
             with container.puzzle_explainer() as explain:
@@ -93,35 +131,37 @@ def create_app(container: Container) -> FastAPI:
             raise HTTPException(status_code=422, detail="Not a legal move") from e
         return serializers.explanation(explained)
 
-    @app.get("/api/progress/{time_class}")
-    def get_progress(time_class: TimeClass, days: int = 30) -> dict[str, object]:
-        report = container.compare_progress().execute(username, time_class, days)
-        return serializers.progress(report)
+    return router
 
-    @app.middleware("http")
-    async def revalidate_static(
-        request: Request, call_next: Callable[[Request], Awaitable[Response]]
-    ) -> Response:
-        response = await call_next(request)
-        if request.url.path == "/" or request.url.path.startswith("/static/"):
-            response.headers["Cache-Control"] = "no-cache"
-        return response
 
-    @app.get("/api/training-plan")
+def _coaching_routes(container: Container) -> APIRouter:
+    router = APIRouter()
+
+    @router.get("/openings")
+    def list_openings() -> list[dict[str, object]]:
+        try:
+            openings = container.get_repertoire().execute()
+        except InvalidRepertoireError as e:
+            raise HTTPException(status_code=422, detail=str(e)) from e
+        return [serializers.opening(o) for o in openings]
+
+    @router.get("/training-plan")
     def get_training_plan() -> dict[str, object]:
         plan = container.get_training_plan().execute()
         if plan is None:
             raise HTTPException(status_code=404, detail="No training plan yet")
         return serializers.training_plan(plan)
 
-    static_dir = Path(__file__).parent / "static"
-    app.mount("/static", StaticFiles(directory=static_dir, check_dir=False), name="static")
+    return router
 
-    @app.get("/")
-    def get_dashboard() -> HTMLResponse:
-        return HTMLResponse(_versioned_index(static_dir))
 
-    return app
+async def _revalidate_static(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 def _versioned_index(static_dir: Path) -> str:

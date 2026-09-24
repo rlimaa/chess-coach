@@ -48,4 +48,5 @@
 - [x] Overview (highlights, rating trend, openings vs average, clock, habits, opponents, engine section)
 - [x] Game viewer (board, flagged mistakes, eval graph), puzzle trainer, progress view
 - [x] Training tab rendering the coach-maintained training plan
+- [x] Openings tab: repertoire lines on a board (recommended vs your old line)
 - [ ] Live in-browser engine (Stockfish WASM) — deferred

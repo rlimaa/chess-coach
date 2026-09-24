@@ -1,3 +1,4 @@
+import json
 import re
 from collections.abc import Iterator
 from pathlib import Path
@@ -30,6 +31,7 @@ def client(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[TestClie
     monkeypatch.setenv("DB_PATH", str(db_path))
     monkeypatch.setenv("CHESSCOM_USERNAME", "rodigola")
     monkeypatch.setenv("TRAINING_PLAN_PATH", str(tmp_path / "coaching" / "training_plan.md"))
+    monkeypatch.setenv("REPERTOIRE_PATH", str(tmp_path / "coaching" / "repertoire.json"))
     with respx.mock:
         respx.get(f"{API}/rodigola/games/archives").respond(
             json={"archives": [f"{API}/rodigola/games/2026/09"]}
@@ -242,3 +244,52 @@ def test_explanation_after_the_right_answer_has_only_the_best_line(client: TestC
         client.get(f"/api/puzzles/{puzzle_id}/explanation", params={"move": "Ke5"}).status_code
         == 422
     )
+
+
+def _write_repertoire(tmp_path: Path, line: str) -> None:
+    path = tmp_path / "coaching" / "repertoire.json"
+    path.parent.mkdir(exist_ok=True)
+    entry = {
+        "id": "black-italian",
+        "title": "Black vs the Italian: 3...Bc5",
+        "side": "black",
+        "focus": True,
+        "line": line,
+        "key_ply": 5,
+        "why": "3...Nf6 scored 14%",
+        "plan": "...d6, ...Nf6, ...0-0",
+        "instead_of": "e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5",
+        "instead_result": "14% in 7 games",
+    }
+    path.write_text(json.dumps({"lines": [entry]}))
+
+
+def test_openings_show_each_repertoire_line_with_board_positions(
+    client: TestClient, tmp_path: Path
+) -> None:
+    _write_repertoire(tmp_path, "e4 e5 Nf3 Nc6 Bc4 Bc5")
+
+    (opening,) = client.get("/api/openings").json()
+
+    assert opening["id"] == "black-italian"
+    assert opening["side"] == "black"
+    assert opening["key_ply"] == 5
+    assert opening["moves"][5] == {
+        "san": "Bc5",
+        "fen": "r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
+    }
+    assert [m["san"] for m in opening["old_moves"]][-1] == "Ng5"
+    assert opening["instead_result"] == "14% in 7 games"
+
+
+def test_no_repertoire_file_means_no_openings(client: TestClient) -> None:
+    assert client.get("/api/openings").json() == []
+
+
+def test_a_broken_repertoire_line_is_reported(client: TestClient, tmp_path: Path) -> None:
+    _write_repertoire(tmp_path, "e4 e5 Nf6 Nc6 Bc4 Bc5")
+
+    response = client.get("/api/openings")
+
+    assert response.status_code == 422
+    assert "black-italian" in response.json()["detail"]
