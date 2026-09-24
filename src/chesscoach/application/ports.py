@@ -4,6 +4,8 @@ from typing import Protocol
 from chesscoach.application.dto import ArchiveMonth, EngineLine, ReplayedGame
 from chesscoach.domain.entities import Game, GameAnalysis
 from chesscoach.domain.insights import Highlight, TimeClassInsights
+from chesscoach.domain.puzzles import Attempt
+from chesscoach.domain.value_objects import Color
 
 
 class GameSource(Protocol):
@@ -61,4 +63,20 @@ class ReportWriter(Protocol):
         self, username: str, insights: TimeClassInsights, highlights: Sequence[Highlight]
     ) -> str:
         """Persist the report and return where it can be found."""
+        ...
+
+
+class ChessRules(Protocol):
+    def normalize_move(self, fen: str, text: str) -> str | None:
+        """SAN of the move the text describes (SAN or UCI), or None if illegal/unreadable."""
+        ...
+
+    def render(self, fen: str, perspective: Color) -> str: ...
+
+
+class PuzzleAttempts(Protocol):
+    def record(self, attempt: Attempt) -> None: ...
+
+    def all(self) -> list[Attempt]:
+        """Every attempt, oldest first."""
         ...

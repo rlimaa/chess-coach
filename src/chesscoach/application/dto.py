@@ -85,3 +85,31 @@ class WrittenReport:
     games: int
     highlights: tuple[Highlight, ...]
     location: str
+
+
+@dataclass(frozen=True, slots=True)
+class PuzzleResult:
+    legal: bool
+    correct: bool
+    answer_san: str | None
+    solution_san: str
+
+
+@dataclass(frozen=True, slots=True)
+class PeriodMetrics:
+    games: int
+    score_pct: float
+    rating_change: int | None
+    time_trouble_pct: float | None
+    losses_on_time_pct: float | None
+    analyzed_games: int
+    accuracy: float | None
+    serious_per_100: float | None
+
+
+@dataclass(frozen=True, slots=True)
+class ProgressReport:
+    time_class: TimeClass
+    days: int
+    current: PeriodMetrics
+    previous: PeriodMetrics

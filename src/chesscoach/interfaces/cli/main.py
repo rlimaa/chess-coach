@@ -152,3 +152,50 @@ def report(
         player, time_classes or DEFAULT_REPORT_TIME_CLASSES
     )
     presenters.show_reports(console, reports)
+
+
+@app.command()
+def puzzles(
+    username: UsernameOption = None,
+    time_class: TimeClassOption = None,
+    count: Annotated[int, typer.Option("--count", "-n", help="Puzzles in this session.")] = 5,
+    list_only: Annotated[bool, typer.Option("--list", help="Show due puzzles, no quiz.")] = False,
+) -> None:
+    """Train on positions where you went wrong in your own games."""
+    container = _container()
+    player = _resolve_username(container, username)
+    due = container.next_puzzles().execute(player, time_class=time_class, limit=count)
+    if not due:
+        console.print("No puzzles due. Analyze more games or come back later.")
+        return
+    if list_only:
+        presenters.show_puzzle_list(console, due)
+        return
+
+    solve, rules = container.solve_puzzle(), container.chess_rules()
+    solved = 0
+    for number, puzzle in enumerate(due, start=1):
+        presenters.show_puzzle(
+            console, puzzle, rules.render(puzzle.fen, puzzle.color), number, len(due)
+        )
+        result = solve.execute(puzzle, typer.prompt("Your move"))
+        while not result.legal:
+            console.print("That is not a legal move here. Try again.")
+            result = solve.execute(puzzle, typer.prompt("Your move"))
+        solved += result.correct
+        presenters.show_puzzle_result(console, puzzle, result)
+    console.print(f"\n{solved}/{len(due)} solved.")
+
+
+@app.command()
+def progress(
+    time_class: Annotated[TimeClass, typer.Option("--time-class", "-t")],
+    username: UsernameOption = None,
+    days: Annotated[int, typer.Option("--days", "-d", help="Length of each period.")] = 30,
+) -> None:
+    """Compare the last N days with the N days before."""
+    container = _container()
+    player = _resolve_username(container, username)
+    presenters.show_progress(
+        console, container.compare_progress().execute(player, time_class, days)
+    )

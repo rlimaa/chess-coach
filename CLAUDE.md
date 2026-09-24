@@ -10,11 +10,33 @@ analyzed with Stockfish), never on generic tips alone. Be concrete: cite games, 
 - `data/coach.db`: SQLite with games and analyses (gitignored).
 - `reports/`: generated coaching reports (gitignored).
 
+## Coaching workflow
+Personal coaching files live in `coaching/` (gitignored): `training_plan.md` and `checkins/<date>.md`.
+
+When the user asks for coaching, a check-in or "what should I work on":
+1. `make sync`, then `docker compose run --rm coach report` (rapid + blitz). Read both reports in
+   `reports/`. They are the source of truth; cite their numbers.
+2. `docker compose run --rm coach progress -t <class> --days 30` for each time class to see trends
+   since the last check-in.
+3. For engine findings, open the linked games and `coach game <url>` to look at concrete moments.
+4. Update `coaching/training_plan.md`. Keep it short:
+   - Goals: 2-3 measurable targets per time class, e.g. "blitz: losses on time < 20%".
+   - This week's focus: one or two themes taken from the report's "Work on" list.
+   - Drills: `coach puzzles -t <class>` sessions (they come from the user's own mistakes), plus
+     specific habits such as a clock rule or which opening line to study.
+   - Log: date and a one-line result of each check-in.
+5. Write the check-in summary to `coaching/checkins/<date>.md` and tell the user the 3 most
+   important points.
+
+Prefer few, concrete, measurable changes over long advice lists. Reuse `coach puzzles --list`
+to talk through specific positions (never reveal a solution before the user tries it).
+
 ## Running things (everything runs in Docker)
 - `make build`: build the images (compiles Stockfish).
 - `make check`: ruff + mypy --strict + lint-imports + pytest, inside the dev container.
 - Narrowest test: `docker compose run --rm dev pytest tests/<path>::<test> -q`
-- CLI: `docker compose run --rm coach <command>`, e.g. `engine-check`, `sync`, `stats`.
+- CLI: `docker compose run --rm coach <command>`: `engine-check`, `sync`, `stats`, `analyze`,
+  `game`, `report`, `puzzles`, `progress`.
 - `make lock`: refresh `uv.lock` after changing dependencies in `pyproject.toml`.
 
 ## Architecture rules (Clean Architecture, enforced by `lint-imports`)

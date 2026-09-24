@@ -20,6 +20,8 @@ data/*
 !data/.gitkeep
 reports/*
 !reports/.gitkeep
+coaching/*
+!coaching/.gitkeep
 
 # OS / editors
 .DS_Store

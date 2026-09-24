@@ -5,6 +5,8 @@ from collections.abc import Iterable, Sequence
 from chesscoach.application.dto import ArchiveMonth, EngineLine, ReplayedGame
 from chesscoach.domain.entities import Game, GameAnalysis
 from chesscoach.domain.insights import Highlight, TimeClassInsights
+from chesscoach.domain.puzzles import Attempt
+from chesscoach.domain.value_objects import Color
 
 
 class FakeGameSource:
@@ -110,3 +112,25 @@ class InMemoryReportWriter:
     ) -> str:
         self.written.append((username, insights, highlights))
         return f"memory://{insights.time_class.value}"
+
+
+class FakeChessRules:
+    def __init__(self, legal: dict[str, str]) -> None:
+        self._legal = legal
+
+    def normalize_move(self, fen: str, text: str) -> str | None:
+        return self._legal.get(text.strip())
+
+    def render(self, fen: str, perspective: Color) -> str:
+        return f"board {fen} as {perspective.value}"
+
+
+class InMemoryPuzzleAttempts:
+    def __init__(self) -> None:
+        self._attempts: list[Attempt] = []
+
+    def record(self, attempt: Attempt) -> None:
+        self._attempts.append(attempt)
+
+    def all(self) -> list[Attempt]:
+        return sorted(self._attempts, key=lambda a: a.attempted_at)

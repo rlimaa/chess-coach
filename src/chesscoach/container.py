@@ -2,9 +2,11 @@
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from functools import cached_property
 from importlib.metadata import version
 
+from chesscoach.adapters.chess_rules.board_rules import PythonChessRules
 from chesscoach.adapters.chess_rules.clock_reader import PgnClockReader
 from chesscoach.adapters.chess_rules.pgn_replayer import PgnReplayer
 from chesscoach.adapters.chesscom.client import ChessComClient
@@ -15,12 +17,15 @@ from chesscoach.adapters.persistence.sqlite.analysis_repository import SqliteAna
 from chesscoach.adapters.persistence.sqlite.database import SqliteDatabase
 from chesscoach.adapters.persistence.sqlite.evaluation_cache import SqliteEvaluationCache
 from chesscoach.adapters.persistence.sqlite.game_repository import SqliteGameRepository
+from chesscoach.adapters.persistence.sqlite.puzzle_attempts import SqlitePuzzleAttempts
 from chesscoach.adapters.persistence.sqlite.response_cache import SqliteResponseCache
 from chesscoach.adapters.persistence.sqlite.sync_state import SqliteSyncState
 from chesscoach.adapters.reporting.markdown_report_writer import MarkdownReportWriter
 from chesscoach.application.use_cases.analyze_games import AnalyzeGames
+from chesscoach.application.use_cases.compare_progress import CompareProgress
 from chesscoach.application.use_cases.generate_report import GenerateReport
 from chesscoach.application.use_cases.get_stats import GetStats
+from chesscoach.application.use_cases.puzzles import NextPuzzles, SolvePuzzle
 from chesscoach.application.use_cases.review_game import ReviewGame
 from chesscoach.application.use_cases.sync_games import SyncGames
 from chesscoach.config import Settings
@@ -74,6 +79,28 @@ class Container:
             timezone=self.settings.timezone,
         )
 
+    def next_puzzles(self) -> NextPuzzles:
+        return NextPuzzles(
+            games=SqliteGameRepository(self._database),
+            analyses=SqliteAnalysisRepository(self._database),
+            attempts=SqlitePuzzleAttempts(self._database),
+            clock=_now,
+        )
+
+    def solve_puzzle(self) -> SolvePuzzle:
+        return SolvePuzzle(PythonChessRules(), SqlitePuzzleAttempts(self._database), _now)
+
+    def chess_rules(self) -> PythonChessRules:
+        return PythonChessRules()
+
+    def compare_progress(self) -> CompareProgress:
+        return CompareProgress(
+            games=SqliteGameRepository(self._database),
+            analyses=SqliteAnalysisRepository(self._database),
+            clocks=PgnClockReader(),
+            clock=_now,
+        )
+
     def _chesscom(self) -> ChessComClient:
         return ChessComClient(
             user_agent=self._user_agent(), cache=SqliteResponseCache(self._database)
@@ -84,3 +111,7 @@ class Container:
         if self.settings.contact_email:
             agent += f" (contact: {self.settings.contact_email})"
         return agent
+
+
+def _now() -> datetime:
+    return datetime.now(UTC)

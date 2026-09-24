@@ -5,11 +5,15 @@ from chesscoach.adapters.engine.diagnostics import EngineProbe
 from chesscoach.application.dto import (
     AnalyzeReport,
     GameReview,
+    PeriodMetrics,
     PlayerStats,
+    ProgressReport,
+    PuzzleResult,
     SyncReport,
     WrittenReport,
 )
 from chesscoach.domain.entities import MoveAnalysis
+from chesscoach.domain.puzzles import Puzzle
 from chesscoach.domain.services.statistics import ResultSummary
 from chesscoach.domain.value_objects import Evaluation, MoveClass
 
@@ -174,3 +178,70 @@ def show_reports(console: Console, reports: list[WrittenReport]) -> None:
         for highlight in written.highlights[:TOP_HIGHLIGHTS]:
             marker = "[green]+[/]" if highlight.strength else "[red]-[/]"
             console.print(f"  {marker} {highlight.text}")
+
+
+def show_puzzle(console: Console, puzzle: Puzzle, board: str, number: int, total: int) -> None:
+    console.print(
+        f"\n[bold]Puzzle {number}/{total}[/] · {puzzle.time_class.value} vs {puzzle.opponent} · "
+        f"{puzzle.played_at:%Y-%m-%d} · {puzzle.phase.value}"
+    )
+    console.print(board)
+    console.print(
+        f"You played [bold]{puzzle.played_san}[/] ({puzzle.mistake.value}, "
+        f"-{puzzle.win_pct_loss:.0f}% win chance). Find the best move for {puzzle.color.value}."
+    )
+
+
+def show_puzzle_result(console: Console, puzzle: Puzzle, result: PuzzleResult) -> None:
+    if result.correct:
+        console.print(f"[green]Correct![/] {result.solution_san}")
+    else:
+        console.print(
+            f"[red]Not quite.[/] You answered {result.answer_san}; best was "
+            f"{result.solution_san}. Game: {puzzle.game_url}"
+        )
+
+
+def show_puzzle_list(console: Console, puzzles: list[Puzzle]) -> None:
+    for number, puzzle in enumerate(puzzles, start=1):
+        console.print(
+            f"{number}. {puzzle.time_class.value} · {puzzle.played_at:%Y-%m-%d} · vs "
+            f"{puzzle.opponent} · {puzzle.phase.value} · you played {puzzle.played_san} "
+            f"({puzzle.mistake.value}) · {puzzle.game_url}"
+        )
+        console.print(f"   FEN: {puzzle.fen}", soft_wrap=True)
+
+
+_PROGRESS_ROWS: tuple[tuple[str, str, str], ...] = (
+    ("Games", "games", "{:.0f}"),
+    ("Score", "score_pct", "{:.1f}%"),
+    ("Rating change", "rating_change", "{:+.0f}"),
+    ("Games in time trouble", "time_trouble_pct", "{:.1f}%"),
+    ("Losses on time", "losses_on_time_pct", "{:.1f}%"),
+    ("Analyzed games", "analyzed_games", "{:.0f}"),
+    ("Accuracy", "accuracy", "{:.1f}%"),
+    ("Mistakes+blunders per 100 moves", "serious_per_100", "{:.1f}"),
+)
+
+
+def _metric(metrics: PeriodMetrics, field: str, template: str) -> str:
+    value = getattr(metrics, field)
+    return "-" if value is None else template.format(value)
+
+
+def show_progress(console: Console, report: ProgressReport) -> None:
+    table = Table(
+        title=f"{report.time_class.value}: last {report.days} days vs the {report.days} before"
+    )
+    for column in ("Metric", "Previous", "Last", "Change"):
+        table.add_column(column)
+    for label, field, template in _PROGRESS_ROWS:
+        previous, current = getattr(report.previous, field), getattr(report.current, field)
+        change = "-" if previous is None or current is None else f"{current - previous:+.1f}"
+        table.add_row(
+            label,
+            _metric(report.previous, field, template),
+            _metric(report.current, field, template),
+            change,
+        )
+    console.print(table)

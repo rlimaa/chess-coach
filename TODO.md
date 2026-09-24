@@ -38,9 +38,10 @@
 - [x] Engine highlights + report section (shown once ≥20 games of a time class are analyzed)
 
 ## Phase 4 — Coaching loop
-- [ ] training_plan.md workflow in CLAUDE.md
-- [ ] BuildPuzzles from own mistakes + CLI `coach puzzles`
-- [ ] Period-over-period progress comparison
+- [x] Coaching workflow + training plan in CLAUDE.md (`coaching/`, gitignored)
+- [x] Puzzles from own mistakes with spaced repetition + `coach puzzles` (interactive / `--list`)
+- [x] Period-over-period progress comparison (`coach progress`)
+- [ ] First weekly check-in once the nightly analysis has built a sample
 
 ## Phase 5 — Web dashboard
 - [ ] FastAPI interface reusing use cases + `web` compose service

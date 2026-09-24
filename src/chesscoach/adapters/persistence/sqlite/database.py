@@ -80,6 +80,15 @@ _MIGRATIONS = [
         PRIMARY KEY (fen, depth)
     );
     """,
+    """
+    CREATE TABLE IF NOT EXISTS puzzle_attempts (
+        puzzle_id TEXT NOT NULL,
+        attempted_at TEXT NOT NULL,
+        solved INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS puzzle_attempts_puzzle_id
+        ON puzzle_attempts(puzzle_id);
+    """,
 ]
 
 
