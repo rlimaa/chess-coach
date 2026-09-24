@@ -33,9 +33,9 @@
 - [x] Nightly analysis job (`make schedule`, launchd)
 
 ## Phase 3b — Engine-based weaknesses
-- [ ] Build analyzed sample (nightly job: 100 rapid + 100 blitz per night)
-- [ ] Rules: errors by phase, blunders in time trouble, missed tactics, failed conversions
-- [ ] Add engine findings to the per-time-class report
+- [ ] Build analyzed sample (nightly job: 100 rapid + 100 blitz per night), then review the first engine findings
+- [x] Rules: errors by phase, blunders in time trouble, missed mates, unpunished blunders, conversion
+- [x] Engine highlights + report section (shown once ≥20 games of a time class are analyzed)
 
 ## Phase 4 — Coaching loop
 - [ ] training_plan.md workflow in CLAUDE.md

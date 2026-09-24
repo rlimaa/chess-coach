@@ -86,3 +86,13 @@ def test_games_can_be_found_by_id_url_or_url_number(tmp_path: Path) -> None:
     assert repo.find("https://www.chess.com/game/live/12345") == game
     assert repo.find("12345") == game
     assert repo.find("999") is None
+
+
+def test_many_analyses_are_fetched_in_one_call(tmp_path: Path) -> None:
+    repo = SqliteAnalysisRepository(_db(tmp_path))
+    repo.save(ANALYSIS)
+    other = GameAnalysis(game_id="g2", depth=12, moves=ANALYSIS.moves[1:])
+    repo.save(other)
+
+    assert repo.get_many(["g1", "g2", "missing"]) == {"g1": ANALYSIS, "g2": other}
+    assert repo.get_many([]) == {}

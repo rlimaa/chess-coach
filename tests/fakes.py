@@ -89,6 +89,9 @@ class InMemoryAnalysisRepository:
     def analyzed_ids(self) -> set[str]:
         return set(self._analyses)
 
+    def get_many(self, game_ids: Iterable[str]) -> dict[str, GameAnalysis]:
+        return {gid: self._analyses[gid] for gid in game_ids if gid in self._analyses}
+
 
 class FakeClockReader:
     def __init__(self, clocks: dict[str, list[float]]) -> None:

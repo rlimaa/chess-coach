@@ -176,7 +176,8 @@ Chess/
 - `coach report [-t rapid -t blitz]` writes `reports/<date>-<time class>.md` and prints the top highlights.
 
 **Phase 3b: Engine-based weaknesses** (needs a sample of analyzed games per time class)
-- Errors by phase, blunders in time trouble, missed tactics (missed mates, unpunished blunders), and winning positions not converted. These are added to the same per-time-class report.
+- Errors by phase (serious errors per 100 moves), mistakes and blunders under 10% of the clock vs. otherwise, missed forced mates, replies to opponent blunders that fail to punish them, and conversion of positions ≥85% win chance. These are added to the same per-time-class report, with links to the moments on chess.com.
+- Engine findings only appear once ≥20 games of that time class are analyzed; before that the report says how many are done.
 - The sample is built by the nightly job: `make schedule` installs a launchd agent that runs `scripts/nightly-analysis.sh` at 20:00 (sync, then 100 rapid + 100 blitz games at depth 12 on 6 threads).
 
 **Phase 4: Coaching loop & improvement plan**

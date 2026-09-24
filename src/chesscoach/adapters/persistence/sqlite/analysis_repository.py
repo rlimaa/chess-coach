@@ -1,4 +1,7 @@
+import json
 import sqlite3
+from collections import defaultdict
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -41,6 +44,15 @@ _SELECT_GAME_ANALYSIS = (
 _SELECT_MOVE_ANALYSES = (
     f"SELECT {', '.join(_MOVE_ANALYSIS_COLUMNS)} FROM move_analyses WHERE game_id = ? ORDER BY ply"
 )
+# json_each keeps it to one bound parameter however many ids are requested.
+_IDS_PARAM = "(SELECT value FROM json_each(?))"
+_SELECT_GAME_ANALYSES_IN = (
+    f"SELECT {', '.join(_GAME_ANALYSIS_COLUMNS)} FROM game_analyses WHERE game_id IN {_IDS_PARAM}"
+)
+_SELECT_MOVE_ANALYSES_IN = (
+    f"SELECT {', '.join(_MOVE_ANALYSIS_COLUMNS)} FROM move_analyses "
+    f"WHERE game_id IN {_IDS_PARAM} ORDER BY game_id, ply"
+)
 _SELECT_ANALYZED_IDS = "SELECT game_id FROM game_analyses"
 _DELETE_MOVE_ANALYSES = "DELETE FROM move_analyses WHERE game_id = ?"
 
@@ -65,6 +77,19 @@ class SqliteAnalysisRepository:
                 return None
             move_rows = conn.execute(_SELECT_MOVE_ANALYSES, (game_id,)).fetchall()
         return _to_game_analysis(game_row, move_rows)
+
+    def get_many(self, game_ids: Iterable[str]) -> dict[str, GameAnalysis]:
+        ids = json.dumps(list(game_ids))
+        with self._db.connect() as conn:
+            headers = conn.execute(_SELECT_GAME_ANALYSES_IN, (ids,)).fetchall()
+            move_rows = conn.execute(_SELECT_MOVE_ANALYSES_IN, (ids,)).fetchall()
+        moves_by_game: dict[str, list[sqlite3.Row]] = defaultdict(list)
+        for row in move_rows:
+            moves_by_game[row["game_id"]].append(row)
+        return {
+            header["game_id"]: _to_game_analysis(header, moves_by_game[header["game_id"]])
+            for header in headers
+        }
 
     def analyzed_ids(self) -> set[str]:
         with self._db.connect() as conn:

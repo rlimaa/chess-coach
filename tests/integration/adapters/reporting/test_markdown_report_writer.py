@@ -1,17 +1,24 @@
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from chesscoach.adapters.reporting.markdown_report_writer import MarkdownReportWriter
 from chesscoach.domain.insights import (
     ClockProfile,
+    Conversion,
     DayPart,
+    EngineInsights,
     Highlight,
     LabelledSummary,
+    MomentRef,
     MonthRating,
     OpeningRecord,
+    PhaseErrors,
     RatingGapBucket,
+    TimePressureErrors,
 )
-from chesscoach.domain.value_objects import Color
+from chesscoach.domain.value_objects import Color, Phase
 from tests.builders import make_insights, summary
 
 INSIGHTS = make_insights(
@@ -79,3 +86,49 @@ def test_report_contains_every_insight_section_as_tables(tmp_path: Path) -> None
     assert "| timeout | 30 |" in text
     assert "| 2026-09 | 1369 | 147 |" in text
     assert "| similar (±24) | 10 | 6/0/4 | 60.0% | 50.0% |" in text
+
+
+ENGINE = EngineInsights(
+    games=50,
+    accuracy=81.25,
+    opponent_accuracy=79.5,
+    by_phase=(
+        PhaseErrors(Phase.OPENING, 400, 1.5, 10, 4, 2),
+        PhaseErrors(Phase.MIDDLEGAME, 800, 3.25, 30, 16, 8),
+        PhaseErrors(Phase.ENDGAME, 0, 0.0, 0, 0, 0),
+    ),
+    time_pressure=TimePressureErrors(50, 15, 2000, 80),
+    missed_mates=(MomentRef("https://www.chess.com/game/live/1", 40, "Qd1", "Qh2#"),),
+    punish_opportunities=20,
+    unpunished=(MomentRef("https://www.chess.com/game/live/2", 21, "a3", "Nxe5"),),
+    conversion=Conversion(
+        20, 15, (MomentRef("https://www.chess.com/game/live/3", 30, "Kh1", "Rd8"),)
+    ),
+)
+
+
+def _write_insights(tmp_path: Path, **overrides: Any) -> str:
+    writer = MarkdownReportWriter(tmp_path, today=lambda: date(2026, 9, 24))
+    return Path(writer.write("rodigola", replace(INSIGHTS, **overrides), ())).read_text()
+
+
+def test_engine_section_explains_when_the_sample_is_too_small(tmp_path: Path) -> None:
+    text = _write_insights(tmp_path, analyzed_games=5, engine=None)
+
+    assert "## Engine analysis" in text
+    assert "5 games analyzed so far" in text
+
+
+def test_engine_section_lists_errors_by_phase_and_key_moments(tmp_path: Path) -> None:
+    text = _write_insights(tmp_path, analyzed_games=50, engine=ENGINE)
+
+    assert "50 analyzed games · accuracy 81.2% (opponents 79.5%)" in text
+    assert "| middlegame | 800 | 3.25 | 30 | 16 | 8 | 3.0 |" in text
+    assert (
+        "Under 10% of the clock: 30.0% of moves are mistakes or blunders (4.0% otherwise)." in text
+    )
+    assert "Converted 15 of 20 clearly winning positions (75.0%)." in text
+    assert "Opponent blunders punished: 19 of 20." in text
+    assert "[move 21](https://www.chess.com/game/live/1) Qd1, best Qh2#" in text
+    assert "[move 11...](https://www.chess.com/game/live/2) a3, best Nxe5" in text
+    assert "[move 16](https://www.chess.com/game/live/3) Kh1, best Rd8" in text

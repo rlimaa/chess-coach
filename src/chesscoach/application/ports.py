@@ -47,6 +47,8 @@ class AnalysisRepository(Protocol):
 
     def analyzed_ids(self) -> set[str]: ...
 
+    def get_many(self, game_ids: Iterable[str]) -> dict[str, GameAnalysis]: ...
+
 
 class ClockReader(Protocol):
     def clocks(self, pgn: str) -> Sequence[float]:

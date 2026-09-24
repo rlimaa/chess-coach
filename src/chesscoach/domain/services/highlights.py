@@ -2,7 +2,7 @@
 
 import math
 
-from chesscoach.domain.insights import Highlight, TimeClassInsights
+from chesscoach.domain.insights import EngineInsights, Highlight, TimeClassInsights
 from chesscoach.domain.services.statistics import ResultSummary
 
 MIN_GAMES = 20
@@ -12,6 +12,17 @@ TIME_TROUBLE_SHARE_PCT = 20.0
 TIME_LOSS_SHARE_PCT = 25.0
 NOTABLE_RATING_CHANGE = 25
 TREND_MONTHS = 3
+MIN_PHASE_MOVES = 100
+MIN_PHASES_TO_COMPARE = 2
+PHASE_CONCENTRATION = 1.5
+MIN_LOW_CLOCK_MOVES = 30
+TIME_PRESSURE_FACTOR = 2.0
+MIN_MISSED_MATES = 3
+MIN_PUNISH_OPPORTUNITIES = 10
+UNPUNISHED_SHARE_PCT = 30.0
+MIN_WINNING_GAMES = 10
+POOR_CONVERSION_PCT = 80.0
+GOOD_CONVERSION_PCT = 90.0
 
 
 def find_highlights(insights: TimeClassInsights) -> list[Highlight]:
@@ -23,6 +34,7 @@ def find_highlights(insights: TimeClassInsights) -> list[Highlight]:
         *_clock(insights),
         *_opponents(insights),
         *_rating_trend(insights),
+        *_engine(insights.engine),
     ]
     return sorted(highlights, key=lambda h: h.severity, reverse=True)
 
@@ -154,3 +166,96 @@ def _rating_trend(insights: TimeClassInsights) -> list[Highlight]:
             strength=change > 0,
         )
     ]
+
+
+def _engine(engine: EngineInsights | None) -> list[Highlight]:
+    if engine is None:
+        return []
+    return [
+        *_error_phase(engine),
+        *_time_pressure(engine),
+        *_missed_mates(engine),
+        *_unpunished(engine),
+        *_conversion(engine),
+    ]
+
+
+def _error_phase(engine: EngineInsights) -> list[Highlight]:
+    phases = [p for p in engine.by_phase if p.moves >= MIN_PHASE_MOVES]
+    if len(phases) < MIN_PHASES_TO_COMPARE:
+        return []
+    worst = max(phases, key=lambda p: p.serious_per_100)
+    others = [p.serious_per_100 for p in phases if p is not worst]
+    baseline = sum(others) / len(others)
+    if worst.serious_per_100 < PHASE_CONCENTRATION * max(baseline, 0.1):
+        return []
+    return [
+        Highlight(
+            severity=_severity(worst.serious_per_100 - baseline, worst.moves) / 2,
+            text=f"Your serious errors concentrate in the {worst.phase.value}: "
+            f"{worst.serious_per_100:.1f} per 100 moves vs {baseline:.1f} in other phases.",
+        )
+    ]
+
+
+def _time_pressure(engine: EngineInsights) -> list[Highlight]:
+    pressure = engine.time_pressure
+    if pressure is None or pressure.low_moves < MIN_LOW_CLOCK_MOVES:
+        return []
+    if pressure.low_rate < TIME_PRESSURE_FACTOR * max(pressure.normal_rate, 0.1):
+        return []
+    return [
+        Highlight(
+            severity=_severity(pressure.low_rate - pressure.normal_rate, pressure.low_moves),
+            text=f"Under 10% of your clock, {_pct(pressure.low_rate)} of your moves are "
+            f"mistakes or blunders vs {_pct(pressure.normal_rate)} otherwise.",
+        )
+    ]
+
+
+def _missed_mates(engine: EngineInsights) -> list[Highlight]:
+    missed = len(engine.missed_mates)
+    if missed < MIN_MISSED_MATES:
+        return []
+    return [
+        Highlight(
+            severity=missed,
+            text=f"You missed {missed} forced mates in {engine.games} analyzed games. "
+            "Look for checks and captures first when you are attacking.",
+        )
+    ]
+
+
+def _unpunished(engine: EngineInsights) -> list[Highlight]:
+    chances = engine.punish_opportunities
+    if chances < MIN_PUNISH_OPPORTUNITIES:
+        return []
+    share = 100 * len(engine.unpunished) / chances
+    if share < UNPUNISHED_SHARE_PCT:
+        return []
+    return [
+        Highlight(
+            severity=_severity(share, chances),
+            text=f"When your opponent blunders, {_pct(share)} of your replies are mistakes "
+            f"or blunders ({len(engine.unpunished)} of {chances}). Ask what their last move "
+            "allowed.",
+        )
+    ]
+
+
+def _conversion(engine: EngineInsights) -> list[Highlight]:
+    conversion = engine.conversion
+    if conversion.winning_games < MIN_WINNING_GAMES:
+        return []
+    detail = f"{_pct(conversion.rate)} of clearly winning positions "
+    detail += f"({conversion.converted} of {conversion.winning_games})"
+    if conversion.rate < POOR_CONVERSION_PCT:
+        return [
+            Highlight(
+                severity=_severity(GOOD_CONVERSION_PCT - conversion.rate, conversion.winning_games),
+                text=f"You only convert {detail}. Simplify and trade when ahead.",
+            )
+        ]
+    if conversion.rate >= GOOD_CONVERSION_PCT:
+        return [Highlight(severity=1.0, text=f"You convert {detail}.", strength=True)]
+    return []

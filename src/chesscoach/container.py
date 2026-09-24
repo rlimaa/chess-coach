@@ -68,6 +68,7 @@ class Container:
     def generate_report(self) -> GenerateReport:
         return GenerateReport(
             games=SqliteGameRepository(self._database),
+            analyses=SqliteAnalysisRepository(self._database),
             clocks=PgnClockReader(),
             writer=MarkdownReportWriter(self.settings.reports_dir),
             timezone=self.settings.timezone,

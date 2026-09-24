@@ -2,10 +2,18 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 
-from chesscoach.domain.entities import Game, PlayerSide
+from chesscoach.domain.entities import Game, GameAnalysis, MoveAnalysis, PlayerSide
 from chesscoach.domain.insights import StreakImpact, TimeClassInsights
 from chesscoach.domain.services.statistics import ResultSummary
-from chesscoach.domain.value_objects import Color, Outcome, TimeClass, TimeControl
+from chesscoach.domain.value_objects import (
+    Color,
+    Evaluation,
+    MoveClass,
+    Outcome,
+    Phase,
+    TimeClass,
+    TimeControl,
+)
 
 _DEFAULT_GAME = Game(
     id="game-1",
@@ -56,3 +64,27 @@ _DEFAULT_INSIGHTS = TimeClassInsights(
 
 def make_insights(**overrides: Any) -> TimeClassInsights:
     return replace(_DEFAULT_INSIGHTS, **overrides)
+
+
+_DEFAULT_MOVE = MoveAnalysis(
+    ply=0,
+    color=Color.WHITE,
+    san="e4",
+    fen_before="fen",
+    phase=Phase.MIDDLEGAME,
+    eval_before=Evaluation.cp(0),
+    eval_after=Evaluation.cp(0),
+    best_move_san="e4",
+    win_pct_loss=0.0,
+    move_class=MoveClass.BEST,
+    clock_seconds=None,
+)
+
+
+def make_move(**overrides: Any) -> MoveAnalysis:
+    return replace(_DEFAULT_MOVE, **overrides)
+
+
+def make_analysis(game: Game, *moves: MoveAnalysis) -> GameAnalysis:
+    numbered = tuple(replace(m, ply=i) if m.ply == 0 and i else m for i, m in enumerate(moves))
+    return GameAnalysis(game_id=game.id, depth=12, moves=numbered)

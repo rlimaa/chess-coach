@@ -2,10 +2,16 @@ from collections.abc import Iterable, Sequence
 from zoneinfo import ZoneInfo
 
 from chesscoach.application.dto import WrittenReport
-from chesscoach.application.ports import ClockReader, GameRepository, ReportWriter
-from chesscoach.domain.entities import Game
-from chesscoach.domain.insights import TimeClassInsights
+from chesscoach.application.ports import (
+    AnalysisRepository,
+    ClockReader,
+    GameRepository,
+    ReportWriter,
+)
+from chesscoach.domain.entities import Game, GameAnalysis
+from chesscoach.domain.insights import EngineInsights, TimeClassInsights
 from chesscoach.domain.services.clock_usage import clock_profile, termination_counts
+from chesscoach.domain.services.engine_insights import engine_insights
 from chesscoach.domain.services.habits import (
     by_day_part,
     by_session_position,
@@ -20,17 +26,20 @@ from chesscoach.domain.services.statistics import summarize
 from chesscoach.domain.value_objects import Outcome, TimeClass
 
 MIN_OPENING_GAMES = 10
+MIN_ANALYZED_GAMES = 20
 
 
 class GenerateReport:
     def __init__(
         self,
         games: GameRepository,
+        analyses: AnalysisRepository,
         clocks: ClockReader,
         writer: ReportWriter,
         timezone: ZoneInfo,
     ) -> None:
         self._games = games
+        self._analyses = analyses
         self._clocks = clocks
         self._writer = writer
         self._timezone = timezone
@@ -49,6 +58,7 @@ class GenerateReport:
         return reports
 
     def _insights(self, time_class: TimeClass, games: Sequence[Game]) -> TimeClassInsights:
+        analyses = self._analyses.get_many(g.id for g in games)
         return TimeClassInsights(
             time_class=time_class,
             overall=summarize(games),
@@ -62,4 +72,14 @@ class GenerateReport:
             by_weekday=tuple(by_weekday(games, self._timezone)),
             by_rating_gap=tuple(by_rating_gap(games)),
             rating_by_month=tuple(rating_by_month(games)),
+            analyzed_games=len(analyses),
+            engine=self._engine_insights(games, analyses),
         )
+
+    @staticmethod
+    def _engine_insights(
+        games: Sequence[Game], analyses: dict[str, GameAnalysis]
+    ) -> EngineInsights | None:
+        if len(analyses) < MIN_ANALYZED_GAMES:
+            return None
+        return engine_insights([(g, analyses[g.id]) for g in games if g.id in analyses])
