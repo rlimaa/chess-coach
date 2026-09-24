@@ -1,8 +1,9 @@
+import hashlib
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -92,7 +93,16 @@ def create_app(container: Container) -> FastAPI:
     app.mount("/static", StaticFiles(directory=static_dir, check_dir=False), name="static")
 
     @app.get("/")
-    def get_dashboard() -> FileResponse:
-        return FileResponse(static_dir / "index.html")
+    def get_dashboard() -> HTMLResponse:
+        return HTMLResponse(_versioned_index(static_dir))
 
     return app
+
+
+def _versioned_index(static_dir: Path) -> str:
+    """Stamp asset URLs with a content hash so browsers never run a stale script."""
+    html = (static_dir / "index.html").read_text()
+    for asset in ("app.js", "styles.css"):
+        digest = hashlib.sha256((static_dir / asset).read_bytes()).hexdigest()[:12]
+        html = html.replace(f'/static/{asset}"', f'/static/{asset}?v={digest}"')
+    return html

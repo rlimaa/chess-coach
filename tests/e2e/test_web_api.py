@@ -1,3 +1,4 @@
+import re
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -166,3 +167,13 @@ def test_game_detail_accepts_the_full_chesscom_url(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json()["game"]["id"] == BLITZ["uuid"]
+
+
+def test_dashboard_assets_are_versioned_so_updates_are_never_cached(client: TestClient) -> None:
+    page = client.get("/").text
+
+    script = re.search(r'src="(/static/app\.js\?v=[0-9a-f]{12})"', page)
+    style = re.search(r'href="(/static/styles\.css\?v=[0-9a-f]{12})"', page)
+    assert script is not None
+    assert style is not None
+    assert client.get(script.group(1)).status_code == 200
