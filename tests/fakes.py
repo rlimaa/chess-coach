@@ -2,8 +2,8 @@
 
 from collections.abc import Iterable, Sequence
 
-from chesscoach.application.dto import ArchiveMonth
-from chesscoach.domain.entities import Game
+from chesscoach.application.dto import ArchiveMonth, EngineLine, ReplayedGame
+from chesscoach.domain.entities import Game, GameAnalysis
 
 
 class FakeGameSource:
@@ -35,6 +35,16 @@ class InMemoryGameRepository:
         mine = [g for g in self._games.values() if g.user.username.lower() == username.lower()]
         return sorted(mine, key=lambda g: g.played_at)
 
+    def find(self, reference: str) -> Game | None:
+        return next(
+            (
+                g
+                for g in self._games.values()
+                if reference in (g.id, g.url) or g.url.endswith(f"/{reference}")
+            ),
+            None,
+        )
+
 
 class InMemorySyncState:
     def __init__(self) -> None:
@@ -45,3 +55,35 @@ class InMemorySyncState:
 
     def mark_synced(self, username: str, month: ArchiveMonth) -> None:
         self._months.setdefault(username, set()).add(month)
+
+
+class FakeReplayer:
+    def __init__(self, games: dict[str, ReplayedGame]) -> None:
+        self._games = games
+
+    def replay(self, pgn: str) -> ReplayedGame:
+        return self._games[pgn]
+
+
+class FakeEngine:
+    def __init__(self, lines: dict[str, EngineLine]) -> None:
+        self._lines = lines
+        self.calls: list[tuple[str, int]] = []
+
+    def evaluate(self, fen: str, depth: int) -> EngineLine:
+        self.calls.append((fen, depth))
+        return self._lines[fen]
+
+
+class InMemoryAnalysisRepository:
+    def __init__(self) -> None:
+        self._analyses: dict[str, GameAnalysis] = {}
+
+    def save(self, analysis: GameAnalysis) -> None:
+        self._analyses[analysis.game_id] = analysis
+
+    def get(self, game_id: str) -> GameAnalysis | None:
+        return self._analyses.get(game_id)
+
+    def analyzed_ids(self) -> set[str]:
+        return set(self._analyses)

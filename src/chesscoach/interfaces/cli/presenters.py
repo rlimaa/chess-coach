@@ -2,8 +2,17 @@ from rich.console import Console
 from rich.table import Table
 
 from chesscoach.adapters.engine.diagnostics import EngineProbe
-from chesscoach.application.dto import PlayerStats, SyncReport
+from chesscoach.application.dto import AnalyzeReport, GameReview, PlayerStats, SyncReport
+from chesscoach.domain.entities import MoveAnalysis
 from chesscoach.domain.services.statistics import ResultSummary
+from chesscoach.domain.value_objects import Evaluation, MoveClass
+
+_KEY_MOMENTS = (MoveClass.INACCURACY, MoveClass.MISTAKE, MoveClass.BLUNDER)
+_CLASS_STYLE = {
+    MoveClass.INACCURACY: "yellow",
+    MoveClass.MISTAKE: "dark_orange",
+    MoveClass.BLUNDER: "bold red",
+}
 
 
 def show_engine_probe(console: Console, probe: EngineProbe) -> None:
@@ -70,3 +79,74 @@ def show_stats(console: Console, stats: PlayerStats) -> None:
     for opening in stats.openings:
         openings.add_row(opening.name, *_wdl(opening.summary))
     console.print(openings)
+
+
+def show_analyze_report(console: Console, report: AnalyzeReport, depth: int) -> None:
+    console.print(
+        f"Analyzed {report.analyzed} game(s) at depth {depth}; "
+        f"{report.still_pending} still pending."
+    )
+
+
+def show_game_review(console: Console, review: GameReview) -> None:
+    game, analysis = review.game, review.analysis
+    console.print(
+        f"[bold]{game.white.username}[/] ({game.white.rating}) vs "
+        f"[bold]{game.black.username}[/] ({game.black.rating}) · {game.time_class.value} "
+        f"{game.time_control} · {game.played_at:%Y-%m-%d}"
+    )
+    console.print(
+        f"You played {game.user_color.value}: {game.outcome.value} by {game.termination} "
+        f"· engine depth {analysis.depth} · {game.url}"
+    )
+
+    summary = Table(title="Accuracy")
+    for column in ("", "Accuracy", "Inaccuracies", "Mistakes", "Blunders"):
+        summary.add_column(column)
+    for label, color in (("You", game.user_color), ("Opponent", game.opponent_color)):
+        accuracy = analysis.accuracy(color)
+        summary.add_row(
+            label,
+            "-" if accuracy is None else f"{accuracy:.1f}",
+            *(str(analysis.count(color, move_class)) for move_class in _KEY_MOMENTS),
+        )
+    console.print(summary)
+
+    mistakes = [
+        m for m in analysis.moves if m.color is game.user_color and m.move_class in _KEY_MOMENTS
+    ]
+    if not mistakes:
+        console.print("No inaccuracies, mistakes or blunders. Clean game!")
+        return
+    moments = Table(title="Your key moments")
+    for column in ("Move", "Played", "Best", "Judgement", "Eval", "Win % lost", "Clock"):
+        moments.add_column(column)
+    for move in mistakes:
+        moments.add_row(
+            _move_number(move),
+            move.san,
+            move.best_move_san or "-",
+            f"[{_CLASS_STYLE[move.move_class]}]{move.move_class.value}[/]",
+            f"{_eval(move.eval_before)} → {_eval(move.eval_after)}",
+            f"{move.win_pct_loss:.1f}",
+            _clock(move.clock_seconds),
+        )
+    console.print(moments)
+
+
+def _move_number(move: MoveAnalysis) -> str:
+    number = move.ply // 2 + 1
+    return f"{number}." if move.ply % 2 == 0 else f"{number}..."
+
+
+def _eval(evaluation: Evaluation) -> str:
+    if evaluation.mate_in is not None:
+        return f"#{evaluation.mate_in}"
+    return f"{(evaluation.centipawns or 0) / 100:+.2f}"
+
+
+def _clock(seconds: float | None) -> str:
+    if seconds is None:
+        return "-"
+    minutes, rest = divmod(int(seconds), 60)
+    return f"{minutes}:{rest:02d}"

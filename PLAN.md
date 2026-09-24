@@ -159,10 +159,12 @@ Chess/
 - CLI: `coach sync` and `coach stats`, showing rating per time control, win rate by color and opening, and results over time.
 
 **Phase 2: Engine analysis**
-- Domain: `Evaluation`, `WinProbability`, `MoveClass`. `classification.py` uses the Lichess win % formula with thresholds inaccuracy ≥10, mistake ≥20, blunder ≥30. Add phase detection and per-game accuracy.
-- Port: `PositionEngine.analyse(fen, depth, multipv) -> list[EngineLine]`.
-- Adapter: `stockfish_engine.py` analyses at depth 16 by default (configurable) with multipv=2, and caches results by FEN.
-- Use case: `AnalyzeGames`. CLI: `coach analyze --last 50` shows progress and skips games already analyzed.
+- Domain: `Evaluation`, `MoveClass`, `Phase`, `MoveAnalysis`, `GameAnalysis`. `classification.py` uses the Lichess formulas: win % from centipawns, judgement by win-% loss (inaccuracy ≥5, mistake ≥10, blunder ≥15, the same thresholds Lichess uses), per-move accuracy, and game accuracy as the mean of the arithmetic and harmonic means. Phase detection counts the non-pawn pieces left, then looks at the move number.
+- Ports: `GameReplayer` (PGN to plies with position and clock), `PositionEngine.evaluate(fen, depth)`, `AnalysisRepository`.
+- Adapters: `PgnReplayer` (python-chess), `StockfishEngine` (one UCI process per session), `CachingEngine` backed by a SQLite `engine_cache` keyed by (FEN, depth).
+- Use cases: `AnalyzeGames` (newest unanalyzed games first, each position evaluated once) and `ReviewGame`.
+- CLI: `coach analyze --last N [--depth D]` with a progress bar, and `coach game <id|url>` showing accuracy and your key moments.
+- Deferred: multipv (second-best lines). Add it when Phase 3 needs it to separate "only move" situations from ones with several good moves.
 
 **Phase 3: Weakness detection** (the coaching core)
 - Recurring opening problems: openings with a low score, or an early eval drop at the same ECO/line.

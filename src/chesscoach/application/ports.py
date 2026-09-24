@@ -1,8 +1,8 @@
 from collections.abc import Iterable, Sequence
 from typing import Protocol
 
-from chesscoach.application.dto import ArchiveMonth
-from chesscoach.domain.entities import Game
+from chesscoach.application.dto import ArchiveMonth, EngineLine, ReplayedGame
+from chesscoach.domain.entities import Game, GameAnalysis
 
 
 class GameSource(Protocol):
@@ -20,8 +20,28 @@ class GameRepository(Protocol):
         """All stored games of a player, oldest first."""
         ...
 
+    def find(self, reference: str) -> Game | None:
+        """By game id, full URL, or the numeric id at the end of the URL."""
+        ...
+
 
 class SyncStateRepository(Protocol):
     def synced_months(self, username: str) -> set[ArchiveMonth]: ...
 
     def mark_synced(self, username: str, month: ArchiveMonth) -> None: ...
+
+
+class GameReplayer(Protocol):
+    def replay(self, pgn: str) -> ReplayedGame: ...
+
+
+class PositionEngine(Protocol):
+    def evaluate(self, fen: str, depth: int) -> EngineLine: ...
+
+
+class AnalysisRepository(Protocol):
+    def save(self, analysis: GameAnalysis) -> None: ...
+
+    def get(self, game_id: str) -> GameAnalysis | None: ...
+
+    def analyzed_ids(self) -> set[str]: ...

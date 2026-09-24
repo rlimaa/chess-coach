@@ -35,6 +35,9 @@ _INSERT = (
 _SELECT_BY_USER = (
     f"SELECT {', '.join(_COLUMNS)} FROM games WHERE user_username_lc = ? ORDER BY played_at"
 )
+_SELECT_BY_REFERENCE = (
+    f"SELECT {', '.join(_COLUMNS)} FROM games WHERE id = ? OR url = ? OR url LIKE ? LIMIT 1"
+)
 
 
 class SqliteGameRepository:
@@ -49,6 +52,13 @@ class SqliteGameRepository:
         with self._db.connect() as conn:
             rows = conn.execute(_SELECT_BY_USER, (username.lower(),)).fetchall()
         return [_to_game(row) for row in rows]
+
+    def find(self, reference: str) -> Game | None:
+        with self._db.connect() as conn:
+            row = conn.execute(
+                _SELECT_BY_REFERENCE, (reference, reference, f"%/{reference}")
+            ).fetchone()
+        return _to_game(row) if row is not None else None
 
 
 def _to_row(game: Game) -> dict[str, Any]:

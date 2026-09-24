@@ -1,15 +1,24 @@
 """Composition root: the only place that builds concrete adapters from settings."""
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from functools import cached_property
 from importlib.metadata import version
 
+from chesscoach.adapters.chess_rules.pgn_replayer import PgnReplayer
 from chesscoach.adapters.chesscom.client import ChessComClient
+from chesscoach.adapters.engine.caching import CachingEngine
 from chesscoach.adapters.engine.diagnostics import EngineProbe, probe_engine
+from chesscoach.adapters.engine.stockfish_engine import StockfishEngine
+from chesscoach.adapters.persistence.sqlite.analysis_repository import SqliteAnalysisRepository
 from chesscoach.adapters.persistence.sqlite.database import SqliteDatabase
+from chesscoach.adapters.persistence.sqlite.evaluation_cache import SqliteEvaluationCache
 from chesscoach.adapters.persistence.sqlite.game_repository import SqliteGameRepository
 from chesscoach.adapters.persistence.sqlite.response_cache import SqliteResponseCache
 from chesscoach.adapters.persistence.sqlite.sync_state import SqliteSyncState
+from chesscoach.application.use_cases.analyze_games import AnalyzeGames
 from chesscoach.application.use_cases.get_stats import GetStats
+from chesscoach.application.use_cases.review_game import ReviewGame
 from chesscoach.application.use_cases.sync_games import SyncGames
 from chesscoach.config import Settings
 
@@ -36,6 +45,22 @@ class Container:
 
     def get_stats(self) -> GetStats:
         return GetStats(SqliteGameRepository(self._database))
+
+    @contextmanager
+    def analysis_session(self) -> Iterator[AnalyzeGames]:
+        engine = self.settings.engine
+        with StockfishEngine(engine.path, threads=engine.threads, hash_mb=engine.hash_mb) as sf:
+            yield AnalyzeGames(
+                games=SqliteGameRepository(self._database),
+                analyses=SqliteAnalysisRepository(self._database),
+                replayer=PgnReplayer(),
+                engine=CachingEngine(sf, SqliteEvaluationCache(self._database)),
+            )
+
+    def review_game(self) -> ReviewGame:
+        return ReviewGame(
+            SqliteGameRepository(self._database), SqliteAnalysisRepository(self._database)
+        )
 
     def _chesscom(self) -> ChessComClient:
         return ChessComClient(

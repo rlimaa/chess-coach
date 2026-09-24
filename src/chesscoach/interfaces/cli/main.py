@@ -2,8 +2,14 @@ from typing import Annotated
 
 import typer
 from rich.console import Console
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
 
-from chesscoach.application.errors import GameSourceError, PlayerNotFoundError
+from chesscoach.application.errors import (
+    GameNotAnalyzedError,
+    GameNotFoundError,
+    GameSourceError,
+    PlayerNotFoundError,
+)
 from chesscoach.config import load_settings
 from chesscoach.container import Container
 from chesscoach.domain.value_objects import TimeClass
@@ -74,3 +80,52 @@ def stats(
     container = _container()
     player = _resolve_username(container, username)
     presenters.show_stats(console, container.get_stats().execute(player, time_class=time_class))
+
+
+@app.command()
+def analyze(
+    username: UsernameOption = None,
+    last: Annotated[int, typer.Option("--last", "-n", help="How many recent games.")] = 20,
+    depth: Annotated[
+        int | None, typer.Option("--depth", "-d", help="Engine depth (default: from config).")
+    ] = None,
+) -> None:
+    """Analyze your most recent unanalyzed games with Stockfish."""
+    container = _container()
+    player = _resolve_username(container, username)
+    depth = depth or container.settings.engine.depth
+    progress = Progress(
+        TextColumn("{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        console=console,
+    )
+    try:
+        with container.analysis_session() as analyze_games, progress:
+            task = progress.add_task("Analyzing", total=None)
+            report = analyze_games.execute(
+                player,
+                limit=last,
+                depth=depth,
+                on_progress=lambda game, done, total: progress.update(
+                    task, completed=done, total=total, description=game.opponent.username
+                ),
+            )
+    except FileNotFoundError as error:
+        raise _fail(str(error)) from error
+    presenters.show_analyze_report(console, report, depth)
+
+
+@app.command()
+def game(
+    reference: Annotated[str, typer.Argument(help="Game id, chess.com URL or URL number.")],
+) -> None:
+    """Review one analyzed game: accuracy and your worst moves."""
+    try:
+        review = _container().review_game().execute(reference)
+    except GameNotFoundError as error:
+        raise _fail(f"Game '{reference}' not found. Run `coach sync` first?") from error
+    except GameNotAnalyzedError as error:
+        raise _fail("That game is not analyzed yet. Run `coach analyze` first.") from error
+    presenters.show_game_review(console, review)

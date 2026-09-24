@@ -45,6 +45,41 @@ _MIGRATIONS = [
         stored_at TEXT NOT NULL
     );
     """,
+    """
+    CREATE TABLE IF NOT EXISTS game_analyses (
+        game_id TEXT PRIMARY KEY,
+        depth INTEGER NOT NULL,
+        analyzed_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS move_analyses (
+        game_id TEXT NOT NULL REFERENCES game_analyses(game_id) ON DELETE CASCADE,
+        ply INTEGER NOT NULL,
+        color TEXT NOT NULL,
+        san TEXT NOT NULL,
+        fen_before TEXT NOT NULL,
+        phase TEXT NOT NULL,
+        eval_before_cp INTEGER,
+        eval_before_mate INTEGER,
+        eval_after_cp INTEGER,
+        eval_after_mate INTEGER,
+        best_move_san TEXT,
+        win_pct_loss REAL NOT NULL,
+        move_class TEXT NOT NULL,
+        clock_seconds REAL,
+        PRIMARY KEY (game_id, ply)
+    );
+
+    CREATE TABLE IF NOT EXISTS engine_cache (
+        fen TEXT NOT NULL,
+        depth INTEGER NOT NULL,
+        cp INTEGER,
+        mate INTEGER,
+        best_move_uci TEXT,
+        best_move_san TEXT,
+        PRIMARY KEY (fen, depth)
+    );
+    """,
 ]
 
 

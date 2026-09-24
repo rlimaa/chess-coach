@@ -19,10 +19,10 @@
 - [x] CLI: `coach sync`, `coach stats`
 
 ## Phase 2 — Engine analysis
-- [ ] Domain: Evaluation, WinProbability, MoveClass, classification + phase detection + accuracy
-- [ ] Port: PositionEngine; Stockfish adapter with FEN cache
-- [ ] AnalysisRepository (SQLite)
-- [ ] Use case AnalyzeGames + CLI `coach analyze --last N`, `coach game <id>`
+- [x] Domain: Evaluation, WinProbability, MoveClass, classification + phase detection + accuracy
+- [x] Port: PositionEngine; Stockfish adapter with FEN cache
+- [x] AnalysisRepository (SQLite)
+- [x] Use case AnalyzeGames + CLI `coach analyze --last N`, `coach game <id>`
 
 ## Phase 3 — Weakness detection & reports
 - [ ] Rules: openings, phase errors, time trouble, missed tactics, failed conversions

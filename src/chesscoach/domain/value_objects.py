@@ -39,3 +39,37 @@ class TimeControl:
 
     def __str__(self) -> str:
         return self.raw
+
+
+class Phase(StrEnum):
+    OPENING = "opening"
+    MIDDLEGAME = "middlegame"
+    ENDGAME = "endgame"
+
+
+class MoveClass(StrEnum):
+    BEST = "best"
+    GOOD = "good"
+    INACCURACY = "inaccuracy"
+    MISTAKE = "mistake"
+    BLUNDER = "blunder"
+
+
+@dataclass(frozen=True, slots=True)
+class Evaluation:
+    """Engine score from White's point of view; mate_in > 0 means White mates."""
+
+    centipawns: int | None = None
+    mate_in: int | None = None
+
+    def __post_init__(self) -> None:
+        if (self.centipawns is None) == (self.mate_in is None):
+            raise ValueError("An evaluation is either centipawns or mate, not both or neither")
+
+    @classmethod
+    def cp(cls, centipawns: int) -> "Evaluation":
+        return cls(centipawns=centipawns)
+
+    @classmethod
+    def mate(cls, moves: int) -> "Evaluation":
+        return cls(mate_in=moves)
