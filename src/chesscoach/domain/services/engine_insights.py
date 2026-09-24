@@ -35,6 +35,7 @@ def engine_insights(reviews: Sequence[Review]) -> EngineInsights | None:
             for game, move in _user_moves(reviews)
             if _mates_for(move.eval_before, game.user_color)
             and not _mates_for(move.eval_after, game.user_color)
+            and move.move_class in SERIOUS
         ),
         punish_opportunities=opportunities,
         unpunished=unpunished,

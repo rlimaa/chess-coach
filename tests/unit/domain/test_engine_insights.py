@@ -159,3 +159,22 @@ def test_conversion_tracks_games_where_the_user_was_clearly_winning() -> None:
     assert (conversion.winning_games, conversion.converted) == (2, 1)
     assert conversion.rate == 50.0
     assert [m.game_url for m in conversion.thrown] == ["u/thrown"]
+
+
+def test_choosing_a_safe_winning_move_over_a_long_mate_is_not_a_missed_mate() -> None:
+    game = make_game(user_color=ME)
+    analysis = make_analysis(
+        game,
+        make_move(
+            color=ME,
+            eval_before=Evaluation.mate(9),
+            eval_after=Evaluation.cp(1500),
+            move_class=MoveClass.GOOD,
+            win_pct_loss=0.4,
+        ),
+    )
+
+    insights = engine_insights([(game, analysis)])
+
+    assert insights is not None
+    assert insights.missed_mates == ()
