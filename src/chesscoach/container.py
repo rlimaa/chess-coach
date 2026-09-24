@@ -1,6 +1,16 @@
 """Composition root: the only place that builds concrete adapters from settings."""
 
+from functools import cached_property
+from importlib.metadata import version
+
+from chesscoach.adapters.chesscom.client import ChessComClient
 from chesscoach.adapters.engine.diagnostics import EngineProbe, probe_engine
+from chesscoach.adapters.persistence.sqlite.database import SqliteDatabase
+from chesscoach.adapters.persistence.sqlite.game_repository import SqliteGameRepository
+from chesscoach.adapters.persistence.sqlite.response_cache import SqliteResponseCache
+from chesscoach.adapters.persistence.sqlite.sync_state import SqliteSyncState
+from chesscoach.application.use_cases.get_stats import GetStats
+from chesscoach.application.use_cases.sync_games import SyncGames
 from chesscoach.config import Settings
 
 ENGINE_CHECK_DEPTH = 12
@@ -8,7 +18,32 @@ ENGINE_CHECK_DEPTH = 12
 
 class Container:
     def __init__(self, settings: Settings) -> None:
-        self._settings = settings
+        self.settings = settings
+
+    @cached_property
+    def _database(self) -> SqliteDatabase:
+        return SqliteDatabase(self.settings.db_path)
 
     def probe_engine(self) -> EngineProbe:
-        return probe_engine(self._settings.engine.path, depth=ENGINE_CHECK_DEPTH)
+        return probe_engine(self.settings.engine.path, depth=ENGINE_CHECK_DEPTH)
+
+    def sync_games(self) -> SyncGames:
+        return SyncGames(
+            source=self._chesscom(),
+            games=SqliteGameRepository(self._database),
+            sync_state=SqliteSyncState(self._database),
+        )
+
+    def get_stats(self) -> GetStats:
+        return GetStats(SqliteGameRepository(self._database))
+
+    def _chesscom(self) -> ChessComClient:
+        return ChessComClient(
+            user_agent=self._user_agent(), cache=SqliteResponseCache(self._database)
+        )
+
+    def _user_agent(self) -> str:
+        agent = f"chesscoach/{version('chess-coach')}"
+        if self.settings.contact_email:
+            agent += f" (contact: {self.settings.contact_email})"
+        return agent

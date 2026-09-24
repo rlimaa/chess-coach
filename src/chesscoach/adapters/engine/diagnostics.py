@@ -1,5 +1,3 @@
-"""Smoke check that the configured UCI engine starts and can evaluate a position."""
-
 from dataclasses import dataclass
 from pathlib import Path
 

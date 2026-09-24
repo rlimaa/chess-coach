@@ -11,12 +11,12 @@
 - [x] CLAUDE.md (coach role, architecture rules, TDD workflow; points to PLAN.md/TODO.md) + README (setup via Docker)
 
 ## Phase 1 — chess.com integration
-- [ ] Domain: Game, Player, TimeControl, Color, Result
-- [ ] Ports: GameSource, GameRepository
-- [ ] chess.com client (User-Agent, serial, 429 backoff, ETag) + mapper
-- [ ] SQLite GameRepository + schema/migrations
-- [ ] Use cases: SyncGames (incremental, idempotent), GetStats
-- [ ] CLI: `coach sync`, `coach stats`
+- [x] Domain: Game, Player, TimeControl, Color, Result
+- [x] Ports: GameSource, GameRepository
+- [x] chess.com client (User-Agent, serial, 429 backoff, ETag) + mapper
+- [x] SQLite GameRepository + schema/migrations
+- [x] Use cases: SyncGames (incremental, idempotent), GetStats
+- [x] CLI: `coach sync`, `coach stats`
 
 ## Phase 2 — Engine analysis
 - [ ] Domain: Evaluation, WinProbability, MoveClass, classification + phase detection + accuracy
