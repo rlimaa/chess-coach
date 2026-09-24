@@ -61,10 +61,13 @@ class InMemorySyncState:
 
 
 class FakeReplayer:
-    def __init__(self, games: dict[str, ReplayedGame]) -> None:
+    def __init__(self, games: dict[str, ReplayedGame], default: ReplayedGame | None = None) -> None:
         self._games = games
+        self._default = default
 
     def replay(self, pgn: str) -> ReplayedGame:
+        if pgn not in self._games and self._default is not None:
+            return self._default
         return self._games[pgn]
 
 

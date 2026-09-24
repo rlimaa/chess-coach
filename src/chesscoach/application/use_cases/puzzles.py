@@ -2,6 +2,7 @@ from collections.abc import Callable
 from datetime import datetime
 
 from chesscoach.application.dto import PuzzleResult
+from chesscoach.application.errors import PuzzleNotFoundError
 from chesscoach.application.ports import (
     AnalysisRepository,
     ChessRules,
@@ -50,3 +51,20 @@ class SolvePuzzle:
         correct = san == puzzle.solution_san
         self._attempts.record(Attempt(puzzle.id, self._clock(), solved=correct))
         return PuzzleResult(True, correct, san, puzzle.solution_san)
+
+
+class FindPuzzle:
+    def __init__(self, games: GameRepository, analyses: AnalysisRepository) -> None:
+        self._games = games
+        self._analyses = analyses
+
+    def execute(self, puzzle_id: str) -> Puzzle:
+        game_id, _, _ = puzzle_id.rpartition(":")
+        game = self._games.find(game_id) if game_id else None
+        analysis = self._analyses.get(game.id) if game else None
+        if game is None or analysis is None:
+            raise PuzzleNotFoundError(puzzle_id)
+        puzzle = next((p for p in puzzles_from([(game, analysis)]) if p.id == puzzle_id), None)
+        if puzzle is None:
+            raise PuzzleNotFoundError(puzzle_id)
+        return puzzle

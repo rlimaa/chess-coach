@@ -12,6 +12,22 @@ services:
       - ./reports:/app/reports
       - ./config.toml:/app/config.toml:ro
 
+  web:
+    build:
+      context: .
+      target: runtime
+    image: chess-coach:latest
+    command: ["web", "--host", "0.0.0.0"]
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./data:/app/data
+      - ./reports:/app/reports
+      - ./config.toml:/app/config.toml:ro
+    ports:
+      - "8000:8000"
+
   dev:
     build:
       context: .

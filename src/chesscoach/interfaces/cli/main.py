@@ -1,6 +1,7 @@
 from typing import Annotated
 
 import typer
+import uvicorn
 from rich.console import Console
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
 
@@ -14,6 +15,7 @@ from chesscoach.config import load_settings
 from chesscoach.container import Container
 from chesscoach.domain.value_objects import TimeClass
 from chesscoach.interfaces.cli import presenters
+from chesscoach.interfaces.web.app import create_app
 
 app = typer.Typer(help="Your personal chess coach.", no_args_is_help=True)
 console = Console()
@@ -199,3 +201,12 @@ def progress(
     presenters.show_progress(
         console, container.compare_progress().execute(player, time_class, days)
     )
+
+
+@app.command()
+def web(
+    host: Annotated[str, typer.Option("--host", help="Listen on this address.")] = "127.0.0.1",
+    port: Annotated[int, typer.Option("--port", help="Listen on this port.")] = 8000,
+) -> None:
+    """Run the web dashboard."""
+    uvicorn.run(create_app(_container()), host=host, port=port)

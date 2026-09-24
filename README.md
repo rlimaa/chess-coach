@@ -22,9 +22,14 @@ make engine-check           # confirms the engine works
 
 ## Usage
 ```bash
+make web                    # dashboard on http://localhost:8000
+make sync                   # import new games from chess.com
+make analyze                # Stockfish analysis of recent games
+make report                 # rapid + blitz coaching reports in reports/
+make puzzles                # puzzles from your own mistakes (TC=blitz to filter)
+make progress               # last 30 days vs the 30 before (TC=rapid|blitz)
+make schedule               # nightly sync + analysis at 20:00 (macOS launchd)
 docker compose run --rm coach --help
-make sync                   # import games (Phase 1)
-make stats                  # rating & results overview (Phase 1)
 ```
 
 ## Configuration

@@ -3,7 +3,7 @@
 .DEFAULT_GOAL := help
 COACH := docker compose run --rm coach
 
-.PHONY: help build lock shell engine-check sync analyze stats report puzzles progress schedule unschedule \
+.PHONY: help build lock shell engine-check sync analyze stats report puzzles progress web schedule unschedule \
         check lint format typecheck arch test test-fast
 
 help: ## Show available targets
@@ -38,6 +38,9 @@ puzzles: ## Solve puzzles from your own mistakes (TC=blitz to filter)
 
 progress: ## Last 30 days vs the 30 before (TC=blitz by default)
 	$(COACH) progress --time-class $(or $(TC),blitz)
+
+web: ## Dashboard on http://localhost:8000
+	docker compose up web
 
 schedule: ## Run sync + analysis nightly on macOS (HOUR=20 by default)
 	./scripts/schedule-nightly.sh install

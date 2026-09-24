@@ -272,8 +272,11 @@ Chess/
 - A **puzzle bank from your own mistakes** (positions where you blundered, with the best move as the answer): `coach puzzles`.
 - A progress check-in each week or month compares metrics with the previous period.
 
-**Phase 5: Web dashboard** (later)
-- FastAPI over the same SQLite DB, plus a small frontend: board viewer (chessground + Stockfish WASM), eval graph, weakness charts, puzzle trainer.
+**Phase 5: Web dashboard**
+- `interfaces/web`: a FastAPI app (`create_app(container)`) with JSON endpoints over the same use cases: `/api/meta`, `/api/insights/{time_class}`, `/api/games`, `/api/games/{id|url}`, `/api/puzzles` (solutions stay on the server), `POST /api/puzzles/{id}/answer`, `/api/progress/{time_class}`. Serializers map DTOs to JSON explicitly.
+- Frontend: static ES modules with no build step. Chessground board, hand-written SVG charts (rating trend, openings vs average, eval graph with hover and click-to-move), game viewer with your mistakes flagged, puzzle trainer, and progress table. Light and dark themes; works on phones.
+- `make web` runs the `web` compose service on port 8000.
+- Deferred: live in-browser engine (Stockfish WASM). The stored analysis covers the coaching use.
 
 ## Delivery order
 Phase 0, then commit and push `Phase 0: project setup & skeleton`. Then Phase 1 with TDD, then commit and push `Phase 1: chess.com integration`. Once Phase 1 is in, your real games are in SQLite and `make stats` shows your stats. Each phase commit is reviewed before the next phase starts.

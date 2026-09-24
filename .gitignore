@@ -23,6 +23,9 @@ reports/*
 coaching/*
 !coaching/.gitkeep
 
+# Machine-specific preview config
+.claude/launch.json
+
 # OS / editors
 .DS_Store
 .idea/

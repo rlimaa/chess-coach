@@ -22,11 +22,13 @@ from chesscoach.adapters.persistence.sqlite.response_cache import SqliteResponse
 from chesscoach.adapters.persistence.sqlite.sync_state import SqliteSyncState
 from chesscoach.adapters.reporting.markdown_report_writer import MarkdownReportWriter
 from chesscoach.application.use_cases.analyze_games import AnalyzeGames
+from chesscoach.application.use_cases.build_insights import BuildInsights
 from chesscoach.application.use_cases.compare_progress import CompareProgress
 from chesscoach.application.use_cases.generate_report import GenerateReport
 from chesscoach.application.use_cases.get_stats import GetStats
-from chesscoach.application.use_cases.puzzles import NextPuzzles, SolvePuzzle
+from chesscoach.application.use_cases.puzzles import FindPuzzle, NextPuzzles, SolvePuzzle
 from chesscoach.application.use_cases.review_game import ReviewGame
+from chesscoach.application.use_cases.show_games import RecentGames, ShowGame
 from chesscoach.application.use_cases.sync_games import SyncGames
 from chesscoach.config import Settings
 
@@ -99,6 +101,33 @@ class Container:
             analyses=SqliteAnalysisRepository(self._database),
             clocks=PgnClockReader(),
             clock=_now,
+        )
+
+    def build_insights(self) -> BuildInsights:
+        return BuildInsights(
+            games=SqliteGameRepository(self._database),
+            analyses=SqliteAnalysisRepository(self._database),
+            clocks=PgnClockReader(),
+            timezone=self.settings.timezone,
+        )
+
+    def recent_games(self) -> RecentGames:
+        return RecentGames(
+            games=SqliteGameRepository(self._database),
+            analyses=SqliteAnalysisRepository(self._database),
+        )
+
+    def show_game(self) -> ShowGame:
+        return ShowGame(
+            games=SqliteGameRepository(self._database),
+            analyses=SqliteAnalysisRepository(self._database),
+            replayer=PgnReplayer(),
+        )
+
+    def find_puzzle(self) -> FindPuzzle:
+        return FindPuzzle(
+            games=SqliteGameRepository(self._database),
+            analyses=SqliteAnalysisRepository(self._database),
         )
 
     def _chesscom(self) -> ChessComClient:

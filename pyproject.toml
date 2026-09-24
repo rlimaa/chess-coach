@@ -6,11 +6,13 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "chess>=1.11",
+    "fastapi>=0.115",
     "httpx>=0.28",
     "pydantic>=2.11",
     "pydantic-settings>=2.10",
     "rich>=14.0",
     "typer>=0.16",
+    "uvicorn>=0.35",
 ]
 
 [project.scripts]
@@ -84,4 +86,4 @@ layers = [
 name = "Domain and application stay free of infrastructure libraries"
 type = "forbidden"
 source_modules = ["chesscoach.domain", "chesscoach.application"]
-forbidden_modules = ["httpx", "typer", "rich", "pydantic_settings"]
+forbidden_modules = ["httpx", "typer", "rich", "pydantic_settings", "fastapi", "uvicorn"]

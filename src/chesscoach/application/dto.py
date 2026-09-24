@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from chesscoach.domain.entities import Game, GameAnalysis
-from chesscoach.domain.insights import Highlight
+from chesscoach.domain.insights import Highlight, TimeClassInsights
 from chesscoach.domain.services.statistics import ResultSummary
 from chesscoach.domain.value_objects import Color, Evaluation, TimeClass
 
@@ -113,3 +113,23 @@ class ProgressReport:
     days: int
     current: PeriodMetrics
     previous: PeriodMetrics
+
+
+@dataclass(frozen=True, slots=True)
+class InsightsBundle:
+    insights: TimeClassInsights
+    highlights: tuple[Highlight, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class GameSummary:
+    game: Game
+    analyzed: bool
+    accuracy: float | None
+
+
+@dataclass(frozen=True, slots=True)
+class GameDetail:
+    game: Game
+    analysis: GameAnalysis | None
+    replay: ReplayedGame

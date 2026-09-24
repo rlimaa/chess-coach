@@ -44,5 +44,7 @@
 - [ ] First weekly check-in once the nightly analysis has built a sample
 
 ## Phase 5 — Web dashboard
-- [ ] FastAPI interface reusing use cases + `web` compose service
-- [ ] Board viewer (chessground + Stockfish WASM), eval graph, weakness charts, puzzle trainer
+- [x] FastAPI interface reusing use cases + `web` compose service (`make web`)
+- [x] Overview (highlights, rating trend, openings vs average, clock, habits, opponents, engine section)
+- [x] Game viewer (board, flagged mistakes, eval graph), puzzle trainer, progress view
+- [ ] Live in-browser engine (Stockfish WASM) — deferred
