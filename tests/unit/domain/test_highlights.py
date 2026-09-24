@@ -100,3 +100,19 @@ def test_highlights_are_ordered_by_severity() -> None:
     texts = _texts(openings=(weak, very_weak))
 
     assert "Kings Gambit" in texts[0]
+
+
+def test_rating_trend_uses_calendar_months_even_with_gaps_in_play() -> None:
+    months = tuple(
+        MonthRating(y, m, r, 20) for y, m, r in [(2026, 1, 1300), (2026, 2, 1310), (2026, 8, 1400)]
+    )
+
+    (highlight,) = find_highlights(make_insights(rating_by_month=months))
+
+    assert "+90" in highlight.text
+
+
+def test_no_rating_trend_without_history_three_months_back() -> None:
+    months = tuple(MonthRating(2026, m, 1400 + 10 * m, 20) for m in (7, 8, 9))
+
+    assert find_highlights(make_insights(rating_by_month=months)) == []

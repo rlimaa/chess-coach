@@ -42,3 +42,24 @@ def test_records_are_per_color_and_family_most_played_first_with_minimum_games()
         (Color.BLACK, "Caro Kann Defense", 2),
     ]
     assert records[1].summary.score_pct == 50.0
+
+
+def test_short_names_merge_into_the_family_they_abbreviate() -> None:
+    games = [
+        make_game(opening="Scotch", user_color=Color.WHITE),
+        make_game(opening="Scotch Game Classical Variation", user_color=Color.WHITE),
+        make_game(opening="Alapin Sicilian", user_color=Color.WHITE),
+        make_game(opening="Alapin Sicilian Defense", user_color=Color.BLACK),
+    ]
+
+    families = {(r.color, r.family): r.summary.games for r in opening_records(games, min_games=1)}
+
+    assert families == {
+        (Color.WHITE, "Scotch Game"): 2,
+        (Color.WHITE, "Alapin Sicilian Defense"): 1,
+        (Color.BLACK, "Alapin Sicilian Defense"): 1,
+    }
+
+
+def test_undefined_opening_counts_as_unknown() -> None:
+    assert opening_family("Undefined") == "Unknown"

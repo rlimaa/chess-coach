@@ -153,16 +153,20 @@ def _opponents(insights: TimeClassInsights) -> list[Highlight]:
 
 def _rating_trend(insights: TimeClassInsights) -> list[Highlight]:
     months = insights.rating_by_month
-    if len(months) <= TREND_MONTHS:
+    if not months:
         return []
-    change = months[-1].rating - months[-1 - TREND_MONTHS].rating
+    latest = months[-1]
+    cutoff = latest.year * 12 + latest.month - 1 - TREND_MONTHS
+    earlier = [m for m in months if m.year * 12 + m.month - 1 <= cutoff]
+    if not earlier:
+        return []
+    change = latest.rating - earlier[-1].rating
     if abs(change) < NOTABLE_RATING_CHANGE:
         return []
     return [
         Highlight(
             severity=abs(change) / 10,
-            text=f"Rating {change:+d} over the last {TREND_MONTHS} months "
-            f"(now {months[-1].rating}).",
+            text=f"Rating {change:+d} over the last {TREND_MONTHS} months (now {latest.rating}).",
             strength=change > 0,
         )
     ]
