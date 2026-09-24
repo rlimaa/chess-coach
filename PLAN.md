@@ -275,6 +275,7 @@ Chess/
 **Phase 5: Web dashboard**
 - `interfaces/web`: a FastAPI app (`create_app(container)`) with JSON endpoints over the same use cases: `/api/meta`, `/api/insights/{time_class}`, `/api/games`, `/api/games/{id|url}`, `/api/puzzles` (solutions stay on the server), `POST /api/puzzles/{id}/answer`, `/api/progress/{time_class}`. Serializers map DTOs to JSON explicitly.
 - Frontend: static ES modules with no build step. Chessground board, hand-written SVG charts (rating trend, openings vs average, eval graph with hover and click-to-move), game viewer with your mistakes flagged, puzzle trainer, and progress table. Light and dark themes; works on phones.
+- Training tab: renders `coaching/training_plan.md` (server-side Markdown, raw HTML disabled). Claude maintains the file; the dashboard is the central view of what to focus on.
 - `make web` runs the `web` compose service on port 8000.
 - Deferred: live in-browser engine (Stockfish WASM). The stored analysis covers the coaching use.
 

@@ -89,6 +89,13 @@ def create_app(container: Container) -> FastAPI:
             response.headers["Cache-Control"] = "no-cache"
         return response
 
+    @app.get("/api/training-plan")
+    def get_training_plan() -> dict[str, object]:
+        plan = container.get_training_plan().execute()
+        if plan is None:
+            raise HTTPException(status_code=404, detail="No training plan yet")
+        return serializers.training_plan(plan)
+
     static_dir = Path(__file__).parent / "static"
     app.mount("/static", StaticFiles(directory=static_dir, check_dir=False), name="static")
 

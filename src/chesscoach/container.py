@@ -10,6 +10,7 @@ from chesscoach.adapters.chess_rules.board_rules import PythonChessRules
 from chesscoach.adapters.chess_rules.clock_reader import PgnClockReader
 from chesscoach.adapters.chess_rules.pgn_replayer import PgnReplayer
 from chesscoach.adapters.chesscom.client import ChessComClient
+from chesscoach.adapters.coaching.training_plan_file import MarkdownTrainingPlanFile
 from chesscoach.adapters.engine.caching import CachingEngine
 from chesscoach.adapters.engine.diagnostics import EngineProbe, probe_engine
 from chesscoach.adapters.engine.stockfish_engine import StockfishEngine
@@ -30,6 +31,7 @@ from chesscoach.application.use_cases.puzzles import FindPuzzle, NextPuzzles, So
 from chesscoach.application.use_cases.review_game import ReviewGame
 from chesscoach.application.use_cases.show_games import RecentGames, ShowGame
 from chesscoach.application.use_cases.sync_games import SyncGames
+from chesscoach.application.use_cases.training_plan import GetTrainingPlan
 from chesscoach.config import Settings
 
 ENGINE_CHECK_DEPTH = 12
@@ -129,6 +131,9 @@ class Container:
             games=SqliteGameRepository(self._database),
             analyses=SqliteAnalysisRepository(self._database),
         )
+
+    def get_training_plan(self) -> GetTrainingPlan:
+        return GetTrainingPlan(MarkdownTrainingPlanFile(self.settings.training_plan_path))
 
     def _chesscom(self) -> ChessComClient:
         return ChessComClient(

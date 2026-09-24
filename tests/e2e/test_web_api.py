@@ -29,6 +29,7 @@ def client(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[TestClie
     monkeypatch.setenv("COACH_CONFIG", str(tmp_path / "none.toml"))
     monkeypatch.setenv("DB_PATH", str(db_path))
     monkeypatch.setenv("CHESSCOM_USERNAME", "rodigola")
+    monkeypatch.setenv("TRAINING_PLAN_PATH", str(tmp_path / "coaching" / "training_plan.md"))
     with respx.mock:
         respx.get(f"{API}/rodigola/games/archives").respond(
             json={"archives": [f"{API}/rodigola/games/2026/09"]}
@@ -177,3 +178,24 @@ def test_dashboard_assets_are_versioned_so_updates_are_never_cached(client: Test
     assert script is not None
     assert style is not None
     assert client.get(script.group(1)).status_code == 200
+
+
+def test_training_plan_is_rendered_from_markdown(client: TestClient, tmp_path: Path) -> None:
+    plan = tmp_path / "coaching" / "training_plan.md"
+    plan.parent.mkdir()
+    plan.write_text(
+        "# Training plan\n\n## This week's focus\n1. **Blitz clock rule**\n\n"
+        "| Goal | Now |\n|---|---|\n| Losses on time < 20% | 30% |\n\n<script>alert(1)</script>\n"
+    )
+
+    body = client.get("/api/training-plan").json()
+
+    assert "<h1>Training plan</h1>" in body["html"]
+    assert "<strong>Blitz clock rule</strong>" in body["html"]
+    assert "<table>" in body["html"]
+    assert "<script>" not in body["html"]
+    assert body["updated_at"]
+
+
+def test_missing_training_plan_is_404(client: TestClient) -> None:
+    assert client.get("/api/training-plan").status_code == 404

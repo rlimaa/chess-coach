@@ -849,6 +849,27 @@ function renderPuzzles() {
   });
 }
 
+async function renderTraining() {
+  const main = document.getElementById("main");
+  main.innerHTML = renderLoading();
+  const response = await fetch("/api/training-plan");
+  if (response.status === 404) {
+    main.innerHTML = `<div class="view-container"><div class="empty-state">
+      No training plan yet. Ask Claude for a coaching check-in and it will write one.</div></div>`;
+    return;
+  }
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const plan = await response.json();
+  main.innerHTML = `<div class="view-container training-view">
+    <p class="plan-meta">Updated ${fmtDateFull(plan.updated_at)} · written by your coach from your game analysis</p>
+    <article class="plan">${plan.html}</article>
+  </div>`;
+  main.querySelectorAll(".plan a[href^='http']").forEach((a) => {
+    a.target = "_blank";
+    a.rel = "noopener";
+  });
+}
+
 function renderProgress() {
   const html = ['<div class="view-container"><div class="progress-view">'];
 
@@ -1041,6 +1062,8 @@ async function routeTo(route) {
       renderPuzzles();
       await loadPuzzles();
       renderPuzzles();
+    } else if (view === "training") {
+      await renderTraining();
     } else if (view === "progress") {
       await loadProgress();
       renderProgress();

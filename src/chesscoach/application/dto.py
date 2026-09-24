@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 
 from chesscoach.domain.entities import Game, GameAnalysis
 from chesscoach.domain.insights import Highlight, TimeClassInsights
@@ -133,3 +134,9 @@ class GameDetail:
     game: Game
     analysis: GameAnalysis | None
     replay: ReplayedGame
+
+
+@dataclass(frozen=True, slots=True)
+class TrainingPlan:
+    markdown: str
+    updated_at: datetime

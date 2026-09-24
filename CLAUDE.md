@@ -19,7 +19,9 @@ When the user asks for coaching, a check-in or "what should I work on":
 2. `docker compose run --rm coach progress -t <class> --days 30` for each time class to see trends
    since the last check-in.
 3. For engine findings, open the linked games and `coach game <url>` to look at concrete moments.
-4. Update `coaching/training_plan.md`. Keep it short:
+4. Update `coaching/training_plan.md`. The dashboard's Training tab renders this file as the
+   user's central "what to focus on" view, so keep `## This week's focus` as the first section
+   and refer to dashboard tabs (Games, Puzzles, Progress) rather than CLI commands. Keep it short:
    - Goals: 2-3 measurable targets per time class, e.g. "blitz: losses on time < 20%".
    - This week's focus: one or two themes taken from the report's "Work on" list.
    - Drills: `coach puzzles -t <class>` sessions (they come from the user's own mistakes), plus

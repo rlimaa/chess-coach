@@ -11,6 +11,7 @@ services:
       - ./data:/app/data
       - ./reports:/app/reports
       - ./config.toml:/app/config.toml:ro
+      - ./coaching:/app/coaching:ro
 
   web:
     build:
@@ -25,6 +26,7 @@ services:
       - ./data:/app/data
       - ./reports:/app/reports
       - ./config.toml:/app/config.toml:ro
+      - ./coaching:/app/coaching:ro
     ports:
       - "8000:8000"
 

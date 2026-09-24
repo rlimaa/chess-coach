@@ -47,4 +47,5 @@
 - [x] FastAPI interface reusing use cases + `web` compose service (`make web`)
 - [x] Overview (highlights, rating trend, openings vs average, clock, habits, opponents, engine section)
 - [x] Game viewer (board, flagged mistakes, eval graph), puzzle trainer, progress view
+- [x] Training tab rendering the coach-maintained training plan
 - [ ] Live in-browser engine (Stockfish WASM) — deferred

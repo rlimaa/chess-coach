@@ -1,7 +1,7 @@
 from collections.abc import Iterable, Sequence
 from typing import Protocol
 
-from chesscoach.application.dto import ArchiveMonth, EngineLine, ReplayedGame
+from chesscoach.application.dto import ArchiveMonth, EngineLine, ReplayedGame, TrainingPlan
 from chesscoach.domain.entities import Game, GameAnalysis
 from chesscoach.domain.insights import Highlight, TimeClassInsights
 from chesscoach.domain.puzzles import Attempt
@@ -80,3 +80,7 @@ class PuzzleAttempts(Protocol):
     def all(self) -> list[Attempt]:
         """Every attempt, oldest first."""
         ...
+
+
+class TrainingPlanSource(Protocol):
+    def current(self) -> TrainingPlan | None: ...

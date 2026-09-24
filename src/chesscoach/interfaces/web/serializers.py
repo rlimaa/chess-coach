@@ -1,3 +1,5 @@
+from markdown_it import MarkdownIt
+
 from chesscoach.application.dto import (
     GameDetail,
     GameSummary,
@@ -5,6 +7,7 @@ from chesscoach.application.dto import (
     PeriodMetrics,
     ProgressReport,
     PuzzleResult,
+    TrainingPlan,
 )
 from chesscoach.domain.entities import Game
 from chesscoach.domain.insights import DayPart, EngineInsights
@@ -292,3 +295,11 @@ def _period_metrics(pm: PeriodMetrics) -> dict[str, int | float | None]:
         "accuracy": pm.accuracy,
         "serious_per_100": pm.serious_per_100,
     }
+
+
+# Raw HTML stays disabled: the plan is rendered as text even if it contains tags.
+_MARKDOWN = MarkdownIt("commonmark", {"html": False}).enable("table")
+
+
+def training_plan(plan: TrainingPlan) -> dict[str, object]:
+    return {"html": _MARKDOWN.render(plan.markdown), "updated_at": plan.updated_at.isoformat()}
