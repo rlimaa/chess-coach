@@ -178,7 +178,7 @@ Chess/
 **Phase 3b: Engine-based weaknesses** (needs a sample of analyzed games per time class)
 - Errors by phase (serious errors per 100 moves), mistakes and blunders under 10% of the clock vs. otherwise, missed forced mates, replies to opponent blunders that fail to punish them, and conversion of positions ≥85% win chance. These are added to the same per-time-class report, with links to the moments on chess.com.
 - Engine findings only appear once ≥20 games of that time class are analyzed; before that the report says how many are done.
-- The sample is built by the nightly job: `make schedule` installs a launchd agent that runs `scripts/nightly-analysis.sh` at 20:00 (sync, then 100 rapid + 100 blitz games at depth 12 on 6 threads).
+- The sample is built by the nightly job: `make schedule` installs a launchd agent that runs `scripts/nightly-analysis.sh` at 20:00 (sync, then 100 rapid + 100 blitz games at depth 12 on 2 threads; a lock makes it skip while another analysis is running). One-off runs: `SINCE=2026-01-01 THREADS=10 HASH_MB=2048 scripts/nightly-analysis.sh`.
 
 **Phase 4: Coaching loop & improvement plan**
 - Puzzles from your own mistakes: every analyzed mistake or blunder (not in an already-lost position) becomes a puzzle, with the engine's best move as the solution. Spaced repetition: failed puzzles come back first, solved ones rest for 3, then 7, then 30 days. `coach puzzles [-t blitz] [-n 5]` is interactive (a board from your side, SAN or UCI answers); `--list` is non-interactive for coaching conversations.
@@ -265,7 +265,7 @@ Chess/
 **Phase 3b: Engine-based weaknesses** (needs a sample of analyzed games per time class)
 - Errors by phase (serious errors per 100 moves), mistakes and blunders under 10% of the clock vs. otherwise, missed forced mates, replies to opponent blunders that fail to punish them, and conversion of positions ≥85% win chance. These are added to the same per-time-class report, with links to the moments on chess.com.
 - Engine findings only appear once ≥20 games of that time class are analyzed; before that the report says how many are done.
-- The sample is built by the nightly job: `make schedule` installs a launchd agent that runs `scripts/nightly-analysis.sh` at 20:00 (sync, then 100 rapid + 100 blitz games at depth 12 on 6 threads).
+- The sample is built by the nightly job: `make schedule` installs a launchd agent that runs `scripts/nightly-analysis.sh` at 20:00 (sync, then 100 rapid + 100 blitz games at depth 12 on 2 threads; a lock makes it skip while another analysis is running). One-off runs: `SINCE=2026-01-01 THREADS=10 HASH_MB=2048 scripts/nightly-analysis.sh`.
 
 **Phase 4: Coaching loop & improvement plan**
 - `CLAUDE.md` tells Claude to act as coach: read the latest report, query the DB, review specific games move by move, and keep a `training_plan.md` with goals, weekly focus and drills.

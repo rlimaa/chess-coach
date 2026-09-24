@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from chesscoach.application.dto import AnalyzeReport, EngineLine, Ply
+from chesscoach.application.dto import AnalyzeReport, EngineLine, GameFilter, Ply
 from chesscoach.application.ports import (
     AnalysisRepository,
     GameReplayer,
@@ -10,9 +10,9 @@ from chesscoach.application.ports import (
 from chesscoach.domain.entities import Game, GameAnalysis, MoveAnalysis
 from chesscoach.domain.services.classification import assess_move
 from chesscoach.domain.services.phase_detection import detect_phase
-from chesscoach.domain.value_objects import TimeClass
 
 ProgressCallback = Callable[[Game, int, int], None]
+EVERY_GAME = GameFilter()
 
 
 class AnalyzeGames:
@@ -34,10 +34,10 @@ class AnalyzeGames:
         *,
         limit: int,
         depth: int,
-        time_class: TimeClass | None = None,
+        only: GameFilter = EVERY_GAME,
         on_progress: ProgressCallback | None = None,
     ) -> AnalyzeReport:
-        pending = self._pending_newest_first(username, time_class)
+        pending = self._pending_newest_first(username, only)
         batch = pending[:limit]
         for position, game in enumerate(batch, start=1):
             self._analyses.save(self._analyze(game, depth))
@@ -45,12 +45,12 @@ class AnalyzeGames:
                 on_progress(game, position, len(batch))
         return AnalyzeReport(analyzed=len(batch), still_pending=len(pending) - len(batch))
 
-    def _pending_newest_first(self, username: str, time_class: TimeClass | None) -> list[Game]:
+    def _pending_newest_first(self, username: str, only: GameFilter) -> list[Game]:
         done = self._analyses.analyzed_ids()
         return [
             game
             for game in reversed(self._games.games_of(username))
-            if game.id not in done and time_class in (None, game.time_class)
+            if game.id not in done and only.matches(game)
         ]
 
     def _analyze(self, game: Game, depth: int) -> GameAnalysis:

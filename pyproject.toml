@@ -48,6 +48,8 @@ select = ["E", "F", "W", "I", "N", "B", "UP", "SIM", "PT", "PL", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["PLR2004"]
+# Typer maps each CLI option to a parameter.
+"src/chesscoach/interfaces/cli/**" = ["PLR0913"]
 
 # --- Types -------------------------------------------------------------------
 [tool.mypy]

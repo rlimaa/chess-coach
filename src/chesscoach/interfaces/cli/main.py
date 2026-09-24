@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 
 import typer
@@ -5,6 +6,7 @@ import uvicorn
 from rich.console import Console
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
 
+from chesscoach.application.dto import GameFilter
 from chesscoach.application.errors import (
     GameNotAnalyzedError,
     GameNotFoundError,
@@ -93,6 +95,14 @@ def analyze(
         int | None, typer.Option("--depth", "-d", help="Engine depth (default: from config).")
     ] = None,
     time_class: TimeClassOption = None,
+    since: Annotated[
+        datetime | None,
+        typer.Option(
+            "--since",
+            help="Only games played on or after this date (YYYY-MM-DD).",
+            formats=["%Y-%m-%d"],
+        ),
+    ] = None,
 ) -> None:
     """Analyze your most recent unanalyzed games with Stockfish."""
     container = _container()
@@ -112,7 +122,7 @@ def analyze(
                 player,
                 limit=last,
                 depth=depth,
-                time_class=time_class,
+                only=GameFilter(time_class, since.date() if since else None),
                 on_progress=lambda game, done, total: progress.update(
                     task, completed=done, total=total, description=game.opponent.username
                 ),

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 
 from chesscoach.domain.entities import Game, GameAnalysis
 from chesscoach.domain.insights import Highlight, TimeClassInsights
@@ -140,3 +140,14 @@ class GameDetail:
 class TrainingPlan:
     markdown: str
     updated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class GameFilter:
+    time_class: TimeClass | None = None
+    since: date | None = None
+
+    def matches(self, game: Game) -> bool:
+        return self.time_class in (None, game.time_class) and (
+            self.since is None or game.played_at.date() >= self.since
+        )

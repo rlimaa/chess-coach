@@ -1,6 +1,6 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
-from chesscoach.application.dto import EngineLine, Ply, ReplayedGame
+from chesscoach.application.dto import EngineLine, GameFilter, Ply, ReplayedGame
 from chesscoach.application.use_cases.analyze_games import AnalyzeGames
 from chesscoach.domain.value_objects import Color, Evaluation, MoveClass, Phase, TimeClass
 from tests.builders import make_game
@@ -91,7 +91,16 @@ def test_analysis_can_be_limited_to_one_time_class() -> None:
     analyses = InMemoryAnalysisRepository()
     use_case = AnalyzeGames(games, analyses, FakeReplayer({"pgn": REPLAY}), FakeEngine(LINES))
 
-    report = use_case.execute("me", limit=5, depth=8, time_class=TimeClass.RAPID)
+    report = use_case.execute("me", limit=5, depth=8, only=GameFilter(time_class=TimeClass.RAPID))
 
     assert analyses.analyzed_ids() == {"rapid"}
+    assert report.still_pending == 0
+
+
+def test_analysis_can_be_limited_to_games_since_a_date() -> None:
+    use_case, analyses, _ = _setup("sep-1", "sep-2", "sep-3")
+
+    report = use_case.execute("me", limit=10, depth=8, only=GameFilter(since=date(2026, 9, 2)))
+
+    assert analyses.analyzed_ids() == {"sep-2", "sep-3"}
     assert report.still_pending == 0
