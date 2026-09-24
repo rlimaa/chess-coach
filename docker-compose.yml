@@ -1,0 +1,24 @@
+services:
+  coach:
+    build:
+      context: .
+      target: runtime
+    image: chess-coach:latest
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./data:/app/data
+      - ./reports:/app/reports
+      - ./config.toml:/app/config.toml:ro
+
+  dev:
+    build:
+      context: .
+      target: dev
+    image: chess-coach-dev:latest
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./:/app

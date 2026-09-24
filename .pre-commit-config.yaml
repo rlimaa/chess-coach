@@ -1,0 +1,9 @@
+# Optional: `pre-commit install` on the host (needs pre-commit + Docker).
+repos:
+  - repo: local
+    hooks:
+      - id: make-check
+        name: make check (ruff, mypy, import-linter, pytest in Docker)
+        entry: make check
+        language: system
+        pass_filenames: false

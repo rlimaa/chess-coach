@@ -1,0 +1,14 @@
+# Chess Coach configuration.
+# Precedence: environment variables (.env) > this file > built-in defaults.
+# Personal values (username, email) belong in .env, which is not committed.
+
+chesscom_username = ""
+contact_email = ""
+db_path = "data/coach.db"
+reports_dir = "reports"
+
+[engine]
+path = "/usr/local/bin/stockfish"
+depth = 16
+threads = 2
+hash_mb = 256
