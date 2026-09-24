@@ -47,4 +47,6 @@ make shell                  # shell inside the dev container
 Development is test-driven (see `.claude/skills/tdd/SKILL.md`), and the Clean Architecture layer
 rules are enforced by `lint-imports`.
 
-Stockfish is GPLv3: https://github.com/official-stockfish/Stockfish
+## Credits
+- Stockfish (GPLv3): https://github.com/official-stockfish/Stockfish
+- Board: chessground (GPLv3). Pieces: Maestro by sadsnake1, CC BY-NC-SA 4.0, served from the lichess.org repository. Non-commercial use only.
