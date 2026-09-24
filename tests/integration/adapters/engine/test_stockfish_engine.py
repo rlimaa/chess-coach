@@ -1,6 +1,7 @@
 from collections.abc import Iterator
 from pathlib import Path
 
+import chess
 import pytest
 
 from chesscoach.adapters.engine.stockfish_engine import StockfishEngine
@@ -55,3 +56,33 @@ def test_stalemate_is_a_draw_with_no_move(engine: StockfishEngine) -> None:
 
     assert line.evaluation == Evaluation.cp(0)
     assert line.best_move_uci is None
+
+
+def test_line_without_a_first_move_is_the_engine_principal_variation(
+    engine: StockfishEngine,
+) -> None:
+    line = engine.variation(MATE_IN_ONE, depth=8, max_plies=4)
+
+    assert line.moves[0].san == "Rd8#"
+    assert line.evaluation.mate_in is not None
+
+
+def test_line_starts_with_the_forced_first_move_and_stops_at_game_end(
+    engine: StockfishEngine,
+) -> None:
+    line = engine.variation(MATE_IN_ONE, depth=8, max_plies=6, first_move_san="Rd8#")
+
+    assert [m.san for m in line.moves] == ["Rd8#"]
+    assert line.evaluation.mate_in is not None
+    assert line.evaluation.mate_in > 0
+
+
+def test_line_positions_replay_the_moves_up_to_max_plies(engine: StockfishEngine) -> None:
+    line = engine.variation(START, depth=8, max_plies=6, first_move_san="f3")
+
+    assert line.moves[0].san == "f3"
+    assert 2 <= len(line.moves) <= 6
+    board = chess.Board(START)
+    for move in line.moves:
+        board.push_san(move.san)
+        assert move.fen_after == board.fen()

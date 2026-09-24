@@ -22,12 +22,18 @@ from chesscoach.adapters.persistence.sqlite.puzzle_attempts import SqlitePuzzleA
 from chesscoach.adapters.persistence.sqlite.response_cache import SqliteResponseCache
 from chesscoach.adapters.persistence.sqlite.sync_state import SqliteSyncState
 from chesscoach.adapters.reporting.markdown_report_writer import MarkdownReportWriter
+from chesscoach.application.dto import LineSearch
 from chesscoach.application.use_cases.analyze_games import AnalyzeGames
 from chesscoach.application.use_cases.build_insights import BuildInsights
 from chesscoach.application.use_cases.compare_progress import CompareProgress
 from chesscoach.application.use_cases.generate_report import GenerateReport
 from chesscoach.application.use_cases.get_stats import GetStats
-from chesscoach.application.use_cases.puzzles import FindPuzzle, NextPuzzles, SolvePuzzle
+from chesscoach.application.use_cases.puzzles import (
+    ExplainPuzzle,
+    FindPuzzle,
+    NextPuzzles,
+    SolvePuzzle,
+)
 from chesscoach.application.use_cases.review_game import ReviewGame
 from chesscoach.application.use_cases.show_games import RecentGames, ShowGame
 from chesscoach.application.use_cases.sync_games import SyncGames
@@ -35,6 +41,7 @@ from chesscoach.application.use_cases.training_plan import GetTrainingPlan
 from chesscoach.config import Settings
 
 ENGINE_CHECK_DEPTH = 12
+EXPLANATION_PLIES = 8
 
 
 class Container:
@@ -93,6 +100,18 @@ class Container:
 
     def solve_puzzle(self) -> SolvePuzzle:
         return SolvePuzzle(PythonChessRules(), SqlitePuzzleAttempts(self._database), _now)
+
+    @contextmanager
+    def puzzle_explainer(self) -> Iterator[ExplainPuzzle]:
+        engine = self.settings.engine
+        with StockfishEngine(engine.path, threads=engine.threads, hash_mb=engine.hash_mb) as sf:
+            yield ExplainPuzzle(
+                find=self.find_puzzle(),
+                attempts=SqlitePuzzleAttempts(self._database),
+                rules=PythonChessRules(),
+                engine=sf,
+                search=LineSearch(engine.explain_depth, EXPLANATION_PLIES),
+            )
 
     def chess_rules(self) -> PythonChessRules:
         return PythonChessRules()

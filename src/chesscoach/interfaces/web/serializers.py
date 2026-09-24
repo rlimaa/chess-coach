@@ -6,8 +6,10 @@ from chesscoach.application.dto import (
     InsightsBundle,
     PeriodMetrics,
     ProgressReport,
+    PuzzleExplanation,
     PuzzleResult,
     TrainingPlan,
+    Variation,
 )
 from chesscoach.domain.entities import Game
 from chesscoach.domain.insights import DayPart, EngineInsights
@@ -303,3 +305,17 @@ _MARKDOWN = MarkdownIt("commonmark", {"html": False}).enable("table")
 
 def training_plan(plan: TrainingPlan) -> dict[str, object]:
     return {"html": _MARKDOWN.render(plan.markdown), "updated_at": plan.updated_at.isoformat()}
+
+
+def _variation(line: Variation) -> dict[str, object]:
+    return {
+        "eval": {"cp": line.evaluation.centipawns, "mate": line.evaluation.mate_in},
+        "moves": [{"san": m.san, "fen": m.fen_after} for m in line.moves],
+    }
+
+
+def explanation(explained: PuzzleExplanation) -> dict[str, object]:
+    return {
+        "best": _variation(explained.best),
+        "attempted": _variation(explained.attempted) if explained.attempted else None,
+    }

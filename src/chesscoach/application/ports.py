@@ -1,7 +1,13 @@
 from collections.abc import Iterable, Sequence
 from typing import Protocol
 
-from chesscoach.application.dto import ArchiveMonth, EngineLine, ReplayedGame, TrainingPlan
+from chesscoach.application.dto import (
+    ArchiveMonth,
+    EngineLine,
+    ReplayedGame,
+    TrainingPlan,
+    Variation,
+)
 from chesscoach.domain.entities import Game, GameAnalysis
 from chesscoach.domain.insights import Highlight, TimeClassInsights
 from chesscoach.domain.puzzles import Attempt
@@ -84,3 +90,11 @@ class PuzzleAttempts(Protocol):
 
 class TrainingPlanSource(Protocol):
     def current(self) -> TrainingPlan | None: ...
+
+
+class LineEngine(Protocol):
+    def variation(
+        self, fen: str, depth: int, max_plies: int, first_move_san: str | None = None
+    ) -> Variation:
+        """Engine line from the position; when first_move_san is given, the line starts with it."""
+        ...

@@ -7,7 +7,12 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from chesscoach.application.errors import GameNotFoundError, PuzzleNotFoundError
+from chesscoach.application.errors import (
+    GameNotFoundError,
+    InvalidMoveError,
+    PuzzleNotAttemptedError,
+    PuzzleNotFoundError,
+)
 from chesscoach.container import Container
 from chesscoach.domain.value_objects import TimeClass
 from chesscoach.interfaces.web import serializers
@@ -74,6 +79,19 @@ def create_app(container: Container) -> FastAPI:
             raise HTTPException(status_code=404, detail="Puzzle not found") from e
         result = container.solve_puzzle().execute(puzzle, body.move)
         return serializers.puzzle_result(result)
+
+    @app.get("/api/puzzles/{puzzle_id}/explanation")
+    def explain_puzzle(puzzle_id: str, move: str) -> dict[str, object]:
+        try:
+            with container.puzzle_explainer() as explain:
+                explained = explain.execute(puzzle_id, answer=move)
+        except PuzzleNotFoundError as e:
+            raise HTTPException(status_code=404, detail="Puzzle not found") from e
+        except PuzzleNotAttemptedError as e:
+            raise HTTPException(status_code=409, detail="Answer the puzzle first") from e
+        except InvalidMoveError as e:
+            raise HTTPException(status_code=422, detail="Not a legal move") from e
+        return serializers.explanation(explained)
 
     @app.get("/api/progress/{time_class}")
     def get_progress(time_class: TimeClass, days: int = 30) -> dict[str, object]:

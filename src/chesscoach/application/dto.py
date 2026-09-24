@@ -151,3 +151,29 @@ class GameFilter:
         return self.time_class in (None, game.time_class) and (
             self.since is None or game.played_at.date() >= self.since
         )
+
+
+@dataclass(frozen=True, slots=True)
+class LineMove:
+    san: str
+    fen_after: str
+
+
+@dataclass(frozen=True, slots=True)
+class Variation:
+    """Engine line; the evaluation is White's, after the line's first move."""
+
+    evaluation: Evaluation
+    moves: tuple[LineMove, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class LineSearch:
+    depth: int
+    max_plies: int
+
+
+@dataclass(frozen=True, slots=True)
+class PuzzleExplanation:
+    best: Variation
+    attempted: Variation | None

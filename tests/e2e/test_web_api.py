@@ -199,3 +199,46 @@ def test_training_plan_is_rendered_from_markdown(client: TestClient, tmp_path: P
 
 def test_missing_training_plan_is_404(client: TestClient) -> None:
     assert client.get("/api/training-plan").status_code == 404
+
+
+@pytest.fixture
+def shallow_engine(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ENGINE__EXPLAIN_DEPTH", "8")
+
+
+def _puzzle_id(client: TestClient) -> str:
+    puzzle_id: str = client.get("/api/puzzles", params={"time_class": "blitz"}).json()[0]["id"]
+    return puzzle_id
+
+
+@pytest.mark.slow
+@pytest.mark.usefixtures("shallow_engine")
+def test_explanation_shows_best_and_attempted_lines_after_a_wrong_answer(
+    client: TestClient,
+) -> None:
+    puzzle_id = _puzzle_id(client)
+    explanation_url = f"/api/puzzles/{puzzle_id}/explanation"
+    assert client.get(explanation_url, params={"move": "d4"}).status_code == 409
+
+    client.post(f"/api/puzzles/{puzzle_id}/answer", json={"move": "d4"})
+    body = client.get(explanation_url, params={"move": "d4"}).json()
+
+    assert body["best"]["moves"][0]["san"] == "e4"
+    assert body["attempted"]["moves"][0]["san"] == "d4"
+    assert set(body["best"]["moves"][0]) == {"san", "fen"}
+    assert set(body["best"]["eval"]) == {"cp", "mate"}
+
+
+@pytest.mark.slow
+@pytest.mark.usefixtures("shallow_engine")
+def test_explanation_after_the_right_answer_has_only_the_best_line(client: TestClient) -> None:
+    puzzle_id = _puzzle_id(client)
+    client.post(f"/api/puzzles/{puzzle_id}/answer", json={"move": "e4"})
+
+    body = client.get(f"/api/puzzles/{puzzle_id}/explanation", params={"move": "e2e4"}).json()
+
+    assert body["attempted"] is None
+    assert (
+        client.get(f"/api/puzzles/{puzzle_id}/explanation", params={"move": "Ke5"}).status_code
+        == 422
+    )

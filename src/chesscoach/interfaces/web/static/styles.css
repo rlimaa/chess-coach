@@ -904,3 +904,15 @@ cg-board square.move-dest { background: radial-gradient(rgba(0, 0, 0, 0.14) 22%,
 .plan th, .plan td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
 .plan th { color: var(--text-2); font-weight: 600; }
 .plan a { color: var(--series-1); }
+
+.puzzle-lines { margin: 12px 0; display: grid; gap: 10px; }
+.line-block { padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
+.line-block.attempted { border-left: 3px solid var(--critical); }
+.line-block.best { border-left: 3px solid var(--good); }
+.line-title { font-size: 12px; color: var(--text-2); margin-bottom: 4px; }
+.line-eval { font-weight: 600; color: var(--text); margin-left: 6px; }
+.line-moves { line-height: 1.9; }
+.line-move { cursor: pointer; padding: 1px 4px; border-radius: 4px; }
+.line-move:hover { background: var(--surface); }
+.line-move.current { background: color-mix(in srgb, var(--series-1) 22%, transparent); }
+.line-exit { justify-self: start; }

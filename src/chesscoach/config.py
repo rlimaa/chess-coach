@@ -24,6 +24,7 @@ class EngineSettings(BaseModel):
     depth: int = 16
     threads: int = 2
     hash_mb: int = 256
+    explain_depth: int = 18
 
 
 class Settings(BaseSettings):

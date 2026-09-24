@@ -763,6 +763,7 @@ function renderPuzzles() {
           Find the best move for <strong>${esc(puzzle.color)}</strong>.</p>
         <p id="puzzlePosition" class="muted"></p>
         <div id="puzzleMessage" class="puzzle-message"></div>
+        <div id="puzzleLines" class="puzzle-lines"></div>
         <button id="nextPuzzleBtn" class="btn-primary" hidden>${isLast ? "Done" : "Next puzzle"}</button>
       </div>
     </div>
@@ -794,9 +795,51 @@ function renderPuzzles() {
       ? "Your move. ← → step through the game, ↑ to its start."
       : `Viewing ${current === 0 ? "the start" : `after ${moveLabel(current - 1)} ${positions[current].san}`}. ↓ returns to the ${answered ? "end of the game" : "puzzle"}.`;
   };
-  const nav = { first: () => goTo(0), prev: () => goTo(current - 1), next: () => goTo(current + 1), last: () => goTo(limit()) };
+  let lines = null;
+  let line = null;
+  const showLineMove = (name, idx) => {
+    line = { name, idx: Math.max(-1, Math.min(lines[name].moves.length - 1, idx)) };
+    const fen = line.idx < 0 ? puzzle.fen : lines[name].moves[line.idx].fen;
+    cg.puzzleInstance.set({ fen, lastMove: undefined, movable: { color: undefined } });
+    main.querySelectorAll(".line-move.current").forEach((el) => el.classList.remove("current"));
+    main.querySelector(`.line-move[data-line="${name}"][data-i="${line.idx}"]`)?.classList.add("current");
+    document.getElementById("puzzlePosition").textContent =
+      "Stepping through the line: ← → moves, ↑ puzzle position, ↓ end of line. Game ↩ to leave.";
+  };
+  const leaveLine = () => {
+    line = null;
+    main.querySelectorAll(".line-move.current").forEach((el) => el.classList.remove("current"));
+    goTo(current);
+  };
+  const step = (lineStep, gameStep) => () => (line ? lineStep() : gameStep());
+  const nav = {
+    first: step(() => showLineMove(line.name, -1), () => goTo(0)),
+    prev: step(() => showLineMove(line.name, line.idx - 1), () => goTo(current - 1)),
+    next: step(() => showLineMove(line.name, line.idx + 1), () => goTo(current + 1)),
+    last: step(() => showLineMove(line.name, Infinity), () => goTo(limit())),
+  };
   main.querySelectorAll("[data-nav]").forEach((b) => b.addEventListener("click", nav[b.dataset.nav]));
   bindMoveKeys(nav);
+
+  async function explain(move) {
+    const box = document.getElementById("puzzleLines");
+    box.innerHTML = '<p class="muted">Calculating the lines…</p>';
+    try {
+      lines = await api.get(`/api/puzzles/${encodeURIComponent(puzzle.id)}/explanation?move=${encodeURIComponent(move)}`);
+    } catch (e) {
+      box.innerHTML = `<p class="muted">Could not calculate the lines (${esc(e.message)}).</p>`;
+      return;
+    }
+    box.innerHTML = [
+      lineBlock("best", "Best line", lines.best, puzzle.ply),
+      lines.attempted ? lineBlock("attempted", "After your move", lines.attempted, puzzle.ply) : "",
+      '<button class="btn-small line-exit" type="button">Game ↩</button>',
+    ].join("");
+    box.querySelectorAll(".line-move").forEach((el) =>
+      el.addEventListener("click", () => showLineMove(el.dataset.line, Number(el.dataset.i)))
+    );
+    box.querySelector(".line-exit").addEventListener("click", leaveLine);
+  }
 
   api.get(`/api/games/${encodeURIComponent(puzzle.game_id)}`).then((detail) => {
     positions = detail.positions;
@@ -821,6 +864,7 @@ function renderPuzzles() {
       }
       answered = true;
       cg.puzzleInstance.set({ movable: { color: undefined } });
+      explain(`${orig}${dest}${promotes ? "q" : ""}`);
       if (result.correct) {
         message.textContent = `Correct! ${result.solution_san}`;
         message.className = "puzzle-message success";
@@ -847,6 +891,20 @@ function renderPuzzles() {
     state.currentPuzzleIndex += 1;
     renderPuzzles();
   });
+}
+
+function lineBlock(name, title, variation, startPly) {
+  const moves = variation.moves
+    .map((m, i) => {
+      const ply = startPly + i;
+      const number = ply % 2 === 0 || i === 0 ? `<span class="move-num">${moveLabel(ply)}</span> ` : "";
+      return `${number}<span class="line-move" data-line="${name}" data-i="${i}">${esc(m.san)}</span>`;
+    })
+    .join(" ");
+  return `<div class="line-block ${name}">
+    <div class="line-title">${title} <span class="line-eval">${fmtEval(variation.eval.cp, variation.eval.mate)}</span></div>
+    <div class="line-moves">${moves}</div>
+  </div>`;
 }
 
 async function renderTraining() {

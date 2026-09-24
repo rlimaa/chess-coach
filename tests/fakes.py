@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable, Sequence
 
-from chesscoach.application.dto import ArchiveMonth, EngineLine, ReplayedGame
+from chesscoach.application.dto import ArchiveMonth, EngineLine, ReplayedGame, Variation
 from chesscoach.domain.entities import Game, GameAnalysis
 from chesscoach.domain.insights import Highlight, TimeClassInsights
 from chesscoach.domain.puzzles import Attempt
@@ -137,3 +137,15 @@ class InMemoryPuzzleAttempts:
 
     def all(self) -> list[Attempt]:
         return sorted(self._attempts, key=lambda a: a.attempted_at)
+
+
+class FakeLineEngine:
+    def __init__(self, lines: dict[str, Variation]) -> None:
+        self._lines = lines
+        self.calls: list[tuple[str, str | None]] = []
+
+    def variation(
+        self, fen: str, depth: int, max_plies: int, first_move_san: str | None = None
+    ) -> Variation:
+        self.calls.append((fen, first_move_san))
+        return self._lines[first_move_san or ""]

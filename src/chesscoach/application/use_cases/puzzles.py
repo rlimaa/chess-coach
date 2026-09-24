@@ -1,12 +1,17 @@
 from collections.abc import Callable
 from datetime import datetime
 
-from chesscoach.application.dto import PuzzleResult
-from chesscoach.application.errors import PuzzleNotFoundError
+from chesscoach.application.dto import LineSearch, PuzzleExplanation, PuzzleResult, Variation
+from chesscoach.application.errors import (
+    InvalidMoveError,
+    PuzzleNotAttemptedError,
+    PuzzleNotFoundError,
+)
 from chesscoach.application.ports import (
     AnalysisRepository,
     ChessRules,
     GameRepository,
+    LineEngine,
     PuzzleAttempts,
 )
 from chesscoach.domain.puzzles import Attempt, Puzzle
@@ -59,12 +64,49 @@ class FindPuzzle:
         self._analyses = analyses
 
     def execute(self, puzzle_id: str) -> Puzzle:
-        game_id, _, _ = puzzle_id.rpartition(":")
-        game = self._games.find(game_id) if game_id else None
-        analysis = self._analyses.get(game.id) if game else None
-        if game is None or analysis is None:
-            raise PuzzleNotFoundError(puzzle_id)
-        puzzle = next((p for p in puzzles_from([(game, analysis)]) if p.id == puzzle_id), None)
-        if puzzle is None:
-            raise PuzzleNotFoundError(puzzle_id)
-        return puzzle
+        return _find_puzzle(self._games, self._analyses, puzzle_id)
+
+
+class ExplainPuzzle:
+    def __init__(
+        self,
+        find: FindPuzzle,
+        attempts: PuzzleAttempts,
+        rules: ChessRules,
+        engine: LineEngine,
+        search: LineSearch,
+    ) -> None:
+        self._find = find
+        self._attempts = attempts
+        self._rules = rules
+        self._engine = engine
+        self._search = search
+
+    def execute(self, puzzle_id: str, *, answer: str) -> PuzzleExplanation:
+        puzzle = self._find.execute(puzzle_id)
+        if not any(a.puzzle_id == puzzle_id for a in self._attempts.all()):
+            raise PuzzleNotAttemptedError(puzzle_id)
+        answer_san = self._rules.normalize_move(puzzle.fen, answer)
+        if answer_san is None:
+            raise InvalidMoveError(answer)
+        best = self._line(puzzle.fen, puzzle.solution_san)
+        attempted = (
+            None if answer_san == puzzle.solution_san else self._line(puzzle.fen, answer_san)
+        )
+        return PuzzleExplanation(best, attempted)
+
+    def _line(self, fen: str, first_move_san: str) -> Variation:
+        return self._engine.variation(
+            fen, self._search.depth, self._search.max_plies, first_move_san
+        )
+
+
+def _find_puzzle(games: GameRepository, analyses: AnalysisRepository, puzzle_id: str) -> Puzzle:
+    game_id, _, _ = puzzle_id.rpartition(":")
+    game = games.find(game_id) if game_id else None
+    analysis = analyses.get(game.id) if game else None
+    candidates = puzzles_from([(game, analysis)]) if game and analysis else []
+    puzzle = next((p for p in candidates if p.id == puzzle_id), None)
+    if puzzle is None:
+        raise PuzzleNotFoundError(puzzle_id)
+    return puzzle
