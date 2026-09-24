@@ -3,6 +3,7 @@ from typing import Protocol
 
 from chesscoach.application.dto import ArchiveMonth, EngineLine, ReplayedGame
 from chesscoach.domain.entities import Game, GameAnalysis
+from chesscoach.domain.insights import Highlight, TimeClassInsights
 
 
 class GameSource(Protocol):
@@ -45,3 +46,17 @@ class AnalysisRepository(Protocol):
     def get(self, game_id: str) -> GameAnalysis | None: ...
 
     def analyzed_ids(self) -> set[str]: ...
+
+
+class ClockReader(Protocol):
+    def clocks(self, pgn: str) -> Sequence[float]:
+        """Remaining clock after each ply, in order, starting with White."""
+        ...
+
+
+class ReportWriter(Protocol):
+    def write(
+        self, username: str, insights: TimeClassInsights, highlights: Sequence[Highlight]
+    ) -> str:
+        """Persist the report and return where it can be found."""
+        ...

@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from functools import cached_property
 from importlib.metadata import version
 
+from chesscoach.adapters.chess_rules.clock_reader import PgnClockReader
 from chesscoach.adapters.chess_rules.pgn_replayer import PgnReplayer
 from chesscoach.adapters.chesscom.client import ChessComClient
 from chesscoach.adapters.engine.caching import CachingEngine
@@ -16,7 +17,9 @@ from chesscoach.adapters.persistence.sqlite.evaluation_cache import SqliteEvalua
 from chesscoach.adapters.persistence.sqlite.game_repository import SqliteGameRepository
 from chesscoach.adapters.persistence.sqlite.response_cache import SqliteResponseCache
 from chesscoach.adapters.persistence.sqlite.sync_state import SqliteSyncState
+from chesscoach.adapters.reporting.markdown_report_writer import MarkdownReportWriter
 from chesscoach.application.use_cases.analyze_games import AnalyzeGames
+from chesscoach.application.use_cases.generate_report import GenerateReport
 from chesscoach.application.use_cases.get_stats import GetStats
 from chesscoach.application.use_cases.review_game import ReviewGame
 from chesscoach.application.use_cases.sync_games import SyncGames
@@ -60,6 +63,14 @@ class Container:
     def review_game(self) -> ReviewGame:
         return ReviewGame(
             SqliteGameRepository(self._database), SqliteAnalysisRepository(self._database)
+        )
+
+    def generate_report(self) -> GenerateReport:
+        return GenerateReport(
+            games=SqliteGameRepository(self._database),
+            clocks=PgnClockReader(),
+            writer=MarkdownReportWriter(self.settings.reports_dir),
+            timezone=self.settings.timezone,
         )
 
     def _chesscom(self) -> ChessComClient:

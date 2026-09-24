@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from chesscoach.application.dto import EngineLine, Ply, ReplayedGame
 from chesscoach.application.use_cases.analyze_games import AnalyzeGames
-from chesscoach.domain.value_objects import Color, Evaluation, MoveClass, Phase
+from chesscoach.domain.value_objects import Color, Evaluation, MoveClass, Phase, TimeClass
 from tests.builders import make_game
 from tests.fakes import FakeEngine, FakeReplayer, InMemoryAnalysisRepository, InMemoryGameRepository
 
@@ -78,3 +78,20 @@ def test_progress_is_reported_per_game() -> None:
     use_case.execute("me", limit=5, depth=8, on_progress=lambda g, i, n: seen.append((g.id, i, n)))
 
     assert seen == [("b", 1, 2), ("a", 2, 2)]
+
+
+def test_analysis_can_be_limited_to_one_time_class() -> None:
+    games = InMemoryGameRepository()
+    games.add(
+        [
+            make_game(id="blitz", pgn="pgn", time_class=TimeClass.BLITZ),
+            make_game(id="rapid", pgn="pgn", time_class=TimeClass.RAPID),
+        ]
+    )
+    analyses = InMemoryAnalysisRepository()
+    use_case = AnalyzeGames(games, analyses, FakeReplayer({"pgn": REPLAY}), FakeEngine(LINES))
+
+    report = use_case.execute("me", limit=5, depth=8, time_class=TimeClass.RAPID)
+
+    assert analyses.analyzed_ids() == {"rapid"}
+    assert report.still_pending == 0

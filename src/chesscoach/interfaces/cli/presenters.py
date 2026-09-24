@@ -2,7 +2,13 @@ from rich.console import Console
 from rich.table import Table
 
 from chesscoach.adapters.engine.diagnostics import EngineProbe
-from chesscoach.application.dto import AnalyzeReport, GameReview, PlayerStats, SyncReport
+from chesscoach.application.dto import (
+    AnalyzeReport,
+    GameReview,
+    PlayerStats,
+    SyncReport,
+    WrittenReport,
+)
 from chesscoach.domain.entities import MoveAnalysis
 from chesscoach.domain.services.statistics import ResultSummary
 from chesscoach.domain.value_objects import Evaluation, MoveClass
@@ -150,3 +156,21 @@ def _clock(seconds: float | None) -> str:
         return "-"
     minutes, rest = divmod(int(seconds), 60)
     return f"{minutes}:{rest:02d}"
+
+
+TOP_HIGHLIGHTS = 5
+
+
+def show_reports(console: Console, reports: list[WrittenReport]) -> None:
+    if not reports:
+        console.print("No games for those time classes. Run `coach sync` first.")
+        return
+    for written in reports:
+        console.print(
+            f"\n[bold]{written.time_class.value}[/] ({written.games} games) → {written.location}"
+        )
+        if not written.highlights:
+            console.print("  Nothing stands out yet.")
+        for highlight in written.highlights[:TOP_HIGHLIGHTS]:
+            marker = "[green]+[/]" if highlight.strength else "[red]-[/]"
+            console.print(f"  {marker} {highlight.text}")

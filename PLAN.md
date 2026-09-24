@@ -166,13 +166,18 @@ Chess/
 - CLI: `coach analyze --last N [--depth D]` with a progress bar, and `coach game <id|url>` showing accuracy and your key moments.
 - Deferred: multipv (second-best lines). Add it when Phase 3 needs it to separate "only move" situations from ones with several good moves.
 
-**Phase 3: Weakness detection** (the coaching core)
-- Recurring opening problems: openings with a low score, or an early eval drop at the same ECO/line.
-- Errors by phase: where you lose the most win %.
-- Time management: blunders made with little clock left, and time spent vs. move quality.
-- Tactical misses: mistakes where the engine's best move wins material or mates (hanging pieces, missed forks).
-- Converting winning positions: games where you had ≥+3 and didn't win.
-- `coach report` writes `reports/YYYY-MM-DD.md`, a summary Claude uses to coach you.
+**Phase 3a: Game-level insights** (no engine; every stored game, split by time class)
+- Opening families per color (variations merged), and how games end (timeout, resignation, checkmate…).
+- Clock management from the PGN `[%clk]` annotations: how often you fall below 10% of your clock, your score in time trouble, and your share of losses on time.
+- Habits: score after wins, after losses and after 2+ losses within a sitting (games ≤1 h apart), by position in a session, by time of day and by weekday (in your configured `TIMEZONE`).
+- Opponents: score vs. Elo expectation by pre-game rating gap. chess.com reports ratings *after* the game, so the pre-game gap is reconstructed from the rating change.
+- Rating by month.
+- `find_highlights` ranks weaknesses and strengths by effect size × √games.
+- `coach report [-t rapid -t blitz]` writes `reports/<date>-<time class>.md` and prints the top highlights.
+
+**Phase 3b: Engine-based weaknesses** (needs a sample of analyzed games per time class)
+- Errors by phase, blunders in time trouble, missed tactics (missed mates, unpunished blunders), and winning positions not converted. These are added to the same per-time-class report.
+- The sample is built by the nightly job: `make schedule` installs a launchd agent that runs `scripts/nightly-analysis.sh` at 20:00 (sync, then 100 rapid + 100 blitz games at depth 12 on 6 threads).
 
 **Phase 4: Coaching loop & improvement plan**
 - `CLAUDE.md` tells Claude to act as coach: read the latest report, query the DB, review specific games move by move, and keep a `training_plan.md` with goals, weekly focus and drills.

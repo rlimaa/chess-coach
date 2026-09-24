@@ -4,6 +4,7 @@ from collections.abc import Iterable, Sequence
 
 from chesscoach.application.dto import ArchiveMonth, EngineLine, ReplayedGame
 from chesscoach.domain.entities import Game, GameAnalysis
+from chesscoach.domain.insights import Highlight, TimeClassInsights
 
 
 class FakeGameSource:
@@ -87,3 +88,22 @@ class InMemoryAnalysisRepository:
 
     def analyzed_ids(self) -> set[str]:
         return set(self._analyses)
+
+
+class FakeClockReader:
+    def __init__(self, clocks: dict[str, list[float]]) -> None:
+        self._clocks = clocks
+
+    def clocks(self, pgn: str) -> Sequence[float]:
+        return self._clocks.get(pgn, [])
+
+
+class InMemoryReportWriter:
+    def __init__(self) -> None:
+        self.written: list[tuple[str, TimeClassInsights, Sequence[Highlight]]] = []
+
+    def write(
+        self, username: str, insights: TimeClassInsights, highlights: Sequence[Highlight]
+    ) -> str:
+        self.written.append((username, insights, highlights))
+        return f"memory://{insights.time_class.value}"

@@ -3,7 +3,7 @@
 .DEFAULT_GOAL := help
 COACH := docker compose run --rm coach
 
-.PHONY: help build lock shell engine-check sync analyze stats report \
+.PHONY: help build lock shell engine-check sync analyze stats report schedule unschedule \
         check lint format typecheck arch test test-fast
 
 help: ## Show available targets
@@ -32,6 +32,12 @@ stats: ## Show rating and results stats
 
 report: ## Generate the coaching report
 	$(COACH) report
+
+schedule: ## Run sync + analysis nightly on macOS (HOUR=20 by default)
+	./scripts/schedule-nightly.sh install
+
+unschedule: ## Remove the nightly job
+	./scripts/schedule-nightly.sh uninstall
 
 ifeq ($(IN_CONTAINER),1)
 check: lint typecheck arch test ## Run every quality gate

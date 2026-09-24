@@ -21,6 +21,9 @@ console = Console()
 UsernameOption = Annotated[
     str | None, typer.Option("--username", "-u", help="chess.com username (default: from config).")
 ]
+TimeClassOption = Annotated[
+    TimeClass | None, typer.Option("--time-class", "-t", help="Only this time class.")
+]
 
 
 def _container() -> Container:
@@ -72,9 +75,7 @@ def sync(username: UsernameOption = None) -> None:
 @app.command()
 def stats(
     username: UsernameOption = None,
-    time_class: Annotated[
-        TimeClass | None, typer.Option("--time-class", "-t", help="Only this time class.")
-    ] = None,
+    time_class: TimeClassOption = None,
 ) -> None:
     """Show results, ratings and openings from your imported games."""
     container = _container()
@@ -89,6 +90,7 @@ def analyze(
     depth: Annotated[
         int | None, typer.Option("--depth", "-d", help="Engine depth (default: from config).")
     ] = None,
+    time_class: TimeClassOption = None,
 ) -> None:
     """Analyze your most recent unanalyzed games with Stockfish."""
     container = _container()
@@ -108,6 +110,7 @@ def analyze(
                 player,
                 limit=last,
                 depth=depth,
+                time_class=time_class,
                 on_progress=lambda game, done, total: progress.update(
                     task, completed=done, total=total, description=game.opponent.username
                 ),
@@ -129,3 +132,23 @@ def game(
     except GameNotAnalyzedError as error:
         raise _fail("That game is not analyzed yet. Run `coach analyze` first.") from error
     presenters.show_game_review(console, review)
+
+
+DEFAULT_REPORT_TIME_CLASSES = [TimeClass.RAPID, TimeClass.BLITZ]
+
+
+@app.command()
+def report(
+    username: UsernameOption = None,
+    time_classes: Annotated[
+        list[TimeClass] | None,
+        typer.Option("--time-class", "-t", help="Repeat for several (default: rapid and blitz)."),
+    ] = None,
+) -> None:
+    """Write coaching reports per time class to the reports folder."""
+    container = _container()
+    player = _resolve_username(container, username)
+    reports = container.generate_report().execute(
+        player, time_classes or DEFAULT_REPORT_TIME_CLASSES
+    )
+    presenters.show_reports(console, reports)

@@ -6,6 +6,7 @@ Only the composition root and interfaces read settings; adapters receive plain v
 
 import os
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel
 from pydantic_settings import (
@@ -32,6 +33,7 @@ class Settings(BaseSettings):
     contact_email: str = ""
     db_path: Path = Path("data/coach.db")
     reports_dir: Path = Path("reports")
+    timezone: ZoneInfo = ZoneInfo("UTC")
     engine: EngineSettings = EngineSettings()
 
 

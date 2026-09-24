@@ -52,3 +52,11 @@ def test_config_file_location_can_come_from_environment(monkeypatch: pytest.Monk
     monkeypatch.setenv("COACH_CONFIG", "elsewhere.toml")
 
     assert load_settings().contact_email == "me@example.com"
+
+
+def test_timezone_defaults_to_utc_and_can_be_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert load_settings(config_file=Path("missing.toml")).timezone.key == "UTC"
+
+    monkeypatch.setenv("TIMEZONE", "America/Sao_Paulo")
+
+    assert load_settings(config_file=Path("missing.toml")).timezone.key == "America/Sao_Paulo"

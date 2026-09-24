@@ -6,6 +6,7 @@ chesscom_username = ""
 contact_email = ""
 db_path = "data/coach.db"
 reports_dir = "reports"
+timezone = "UTC"
 
 [engine]
 path = "/usr/local/bin/stockfish"

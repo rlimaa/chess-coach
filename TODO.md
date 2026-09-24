@@ -24,10 +24,18 @@
 - [x] AnalysisRepository (SQLite)
 - [x] Use case AnalyzeGames + CLI `coach analyze --last N`, `coach game <id>`
 
-## Phase 3 — Weakness detection & reports
-- [ ] Rules: openings, phase errors, time trouble, missed tactics, failed conversions
-- [ ] Use cases DetectWeaknesses, GenerateReport + Markdown ReportWriter
-- [ ] CLI `coach report`
+## Phase 3a — Game-level insights (per time class)
+- [x] Opening families by color, how games end
+- [x] Clock management / time trouble from PGN clocks
+- [x] Habits: streaks, session length, time of day, weekday (TIMEZONE setting)
+- [x] Opponent strength vs. Elo expectation (pre-game gap), rating by month
+- [x] Ranked highlights + Markdown ReportWriter + `coach report`
+- [x] Nightly analysis job (`make schedule`, launchd)
+
+## Phase 3b — Engine-based weaknesses
+- [ ] Build analyzed sample (nightly job: 100 rapid + 100 blitz per night)
+- [ ] Rules: errors by phase, blunders in time trouble, missed tactics, failed conversions
+- [ ] Add engine findings to the per-time-class report
 
 ## Phase 4 — Coaching loop
 - [ ] training_plan.md workflow in CLAUDE.md

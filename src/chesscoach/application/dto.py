@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from chesscoach.domain.entities import Game, GameAnalysis
+from chesscoach.domain.insights import Highlight
 from chesscoach.domain.services.statistics import ResultSummary
 from chesscoach.domain.value_objects import Color, Evaluation, TimeClass
 
@@ -76,3 +77,11 @@ class AnalyzeReport:
 class GameReview:
     game: Game
     analysis: GameAnalysis
+
+
+@dataclass(frozen=True, slots=True)
+class WrittenReport:
+    time_class: TimeClass
+    games: int
+    highlights: tuple[Highlight, ...]
+    location: str
