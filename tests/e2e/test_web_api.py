@@ -127,6 +127,8 @@ def test_puzzles_hide_the_solution_until_answered(client: TestClient) -> None:
 
     assert puzzle["fen"] == START
     assert puzzle["played_san"] == "a3"
+    assert puzzle["game_id"] == BLITZ["uuid"]
+    assert puzzle["ply"] == 0
     assert "solution_san" not in puzzle
 
     illegal = client.post(f"/api/puzzles/{puzzle['id']}/answer", json={"move": "Ke5"}).json()

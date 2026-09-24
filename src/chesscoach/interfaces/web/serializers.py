@@ -245,6 +245,7 @@ def _eval_dict(e: Evaluation) -> dict[str, int | None]:
 def puzzle(p: Puzzle) -> dict[str, object]:
     return {
         "id": p.id,
+        "game_id": p.game_id,
         "game_url": p.game_url,
         "played_at": p.played_at.isoformat(),
         "time_class": p.time_class.value,

@@ -638,12 +638,7 @@ function renderGameViewer() {
     <div class="game-content">
       <div class="board-section">
         <div id="board" class="board"></div>
-        <div class="board-controls">
-          <button data-nav="first" class="btn-small" aria-label="First move">⏮</button>
-          <button data-nav="prev" class="btn-small" aria-label="Previous move">◀</button>
-          <button data-nav="next" class="btn-small" aria-label="Next move">▶</button>
-          <button data-nav="last" class="btn-small" aria-label="Last move">⏭</button>
-        </div>
+        <div class="board-controls">${NAV_BUTTONS}</div>
       </div>
       <div class="moves-section">
         <div class="move-list" id="moveList">${rows.join("") || "<p>No moves.</p>"}</div>
@@ -670,7 +665,7 @@ function renderGameViewer() {
     const cell = document.querySelector(`.move[data-idx="${current}"]`);
     if (cell) {
       cell.classList.add("current");
-      cell.scrollIntoView({ block: "nearest" });
+      keepInView(document.getElementById("moveList"), cell);
     }
     document.getElementById("moveInfo").innerHTML = movePanel(positions, current, byPly);
     const cursor = document.getElementById("evalCursor");
@@ -684,15 +679,38 @@ function renderGameViewer() {
   const nav = { first: () => goTo(0), prev: () => goTo(current - 1), next: () => goTo(current + 1), last: () => goTo(positions.length - 1) };
   main.querySelectorAll("[data-nav]").forEach((b) => b.addEventListener("click", nav[b.dataset.nav]));
   main.querySelectorAll("[data-idx]").forEach((el) => el.addEventListener("click", () => goTo(Number(el.dataset.idx))));
-  document.onkeydown = (e) => {
-    const keys = { ArrowLeft: nav.prev, ArrowRight: nav.next, Home: nav.first, End: nav.last };
-    if (keys[e.key] && location.hash.startsWith("#/games/")) {
-      e.preventDefault();
-      keys[e.key]();
-    }
-  };
+  bindMoveKeys("#/games/", nav);
   goTo(0);
 }
+
+function keepInView(container, item) {
+  const box = container.getBoundingClientRect();
+  const rect = item.getBoundingClientRect();
+  if (rect.top < box.top) container.scrollTop -= box.top - rect.top;
+  else if (rect.bottom > box.bottom) container.scrollTop += rect.bottom - box.bottom;
+}
+
+function bindMoveKeys(route, nav) {
+  const keys = {
+    ArrowLeft: nav.prev,
+    ArrowRight: nav.next,
+    ArrowUp: nav.first,
+    ArrowDown: nav.last,
+    Home: nav.first,
+    End: nav.last,
+  };
+  document.onkeydown = (e) => {
+    if (!keys[e.key] || !location.hash.startsWith(route) || e.target.closest("input, textarea, select")) return;
+    e.preventDefault();
+    keys[e.key]();
+  };
+}
+
+const NAV_BUTTONS = `
+  <button data-nav="first" class="btn-small" aria-label="First move (↑)" title="First move (↑)">⏮</button>
+  <button data-nav="prev" class="btn-small" aria-label="Previous move (←)" title="Previous move (←)">◀</button>
+  <button data-nav="next" class="btn-small" aria-label="Next move (→)" title="Next move (→)">▶</button>
+  <button data-nav="last" class="btn-small" aria-label="Last move (↓)" title="Last move (↓)">⏭</button>`;
 
 function moveCell(positions, idx, byPly, userColor) {
   if (idx >= positions.length) return "<span></span>";
@@ -705,7 +723,7 @@ function moveCell(positions, idx, byPly, userColor) {
 }
 
 function movePanel(positions, idx, byPly) {
-  if (idx === 0) return '<span class="muted">Start position. Use ◀ ▶ or the arrow keys.</span>';
+  if (idx === 0) return '<span class="muted">Start position. ← → step through moves, ↑ first, ↓ last.</span>';
   const move = byPly.get(idx - 1);
   const head = `<strong>${moveLabel(idx - 1)} ${esc(positions[idx].san)}</strong>`;
   if (!move) return head;
@@ -719,106 +737,115 @@ function movePanel(positions, idx, byPly) {
 }
 
 function renderPuzzles() {
-  const html = ['<div class="view-container"><div class="puzzles-view">'];
-
+  const main = document.getElementById("main");
   if (!state.puzzles) {
-    html.push(renderLoading());
-    html.push("</div></div>");
-    document.getElementById("main").innerHTML = html.join("");
+    main.innerHTML = renderLoading();
     return;
   }
-
   if (state.puzzles.length === 0) {
-    html.push(
-      '<div class="empty-state">No puzzles due. Come back later or analyze more games.</div>'
-    );
-    html.push("</div></div>");
-    document.getElementById("main").innerHTML = html.join("");
+    main.innerHTML = '<div class="view-container"><div class="empty-state">No puzzles due. Come back later or analyze more games.</div></div>';
     return;
   }
 
-  const puzzle = state.puzzles[state.currentPuzzleIndex];
-  const total = state.puzzles.length;
-  const solved = state.currentPuzzleIndex;
+  const index = state.currentPuzzleIndex;
+  const puzzle = state.puzzles[index];
+  const isLast = index === state.puzzles.length - 1;
+  main.innerHTML = `<div class="view-container puzzles-view">
+    <div class="puzzle-header"><h2>Puzzle ${index + 1}/${state.puzzles.length} · vs ${esc(puzzle.opponent)} ·
+      ${fmtDateFull(puzzle.played_at)} · ${esc(puzzle.phase)}</h2></div>
+    <div class="puzzle-content">
+      <div class="puzzle-board">
+        <div id="puzzleBoard" class="board"></div>
+        <div class="board-controls">${NAV_BUTTONS}</div>
+      </div>
+      <div class="puzzle-info">
+        <p>You played <strong>${esc(puzzle.played_san)}</strong> (${esc(puzzle.mistake)}).
+          Find the best move for <strong>${esc(puzzle.color)}</strong>.</p>
+        <p id="puzzlePosition" class="muted"></p>
+        <div id="puzzleMessage" class="puzzle-message"></div>
+        <button id="nextPuzzleBtn" class="btn-primary" hidden>${isLast ? "Done" : "Next puzzle"}</button>
+      </div>
+    </div>
+  </div>`;
 
-  html.push('<div class="puzzle-header">');
-  html.push(`<h2>Puzzle ${solved + 1}/${total} · vs ${esc(puzzle.opponent)} · ${fmtDateFull(puzzle.played_at)} · ${esc(puzzle.phase)}</h2>`);
-  html.push("</div>");
-
-  html.push('<div class="puzzle-content">');
-  html.push('<div class="puzzle-board">');
-  html.push('<div id="puzzleBoard" class="board"></div>');
-  html.push("</div>");
-
-  html.push('<div class="puzzle-info">');
-  html.push(
-    `<p>You played <strong>${esc(puzzle.played_san)}</strong> (${esc(puzzle.mistake)}). Find the best move for <strong>${esc(puzzle.color)}</strong>.</p>`
-  );
-  html.push('<div id="puzzleMessage" class="puzzle-message"></div>');
-  html.push(
-    `<button id="nextPuzzleBtn" class="btn-primary" style="display:none;">Next puzzle</button>`
-  );
-  html.push("</div>");
-
-  html.push("</div>"); // puzzle-content
-  html.push("</div></div>");
-
-  document.getElementById("main").innerHTML = html.join("");
-
-  const boardEl = document.getElementById("puzzleBoard");
   if (cg.puzzleInstance) cg.puzzleInstance.destroy();
-  cg.puzzleInstance = Chessground(boardEl, {
+  cg.puzzleInstance = Chessground(document.getElementById("puzzleBoard"), {
     fen: puzzle.fen,
-    orientation: puzzle.color === "white" ? "white" : "black",
+    orientation: puzzle.color,
     coordinates: true,
-    viewOnly: false,
-    movable: {
-      free: true,
-      color: puzzle.color,
-      events: { after: (orig, dest) => handlePuzzleMove(orig, dest) },
-    },
+    movable: { free: true, color: puzzle.color, events: { after: (orig, dest) => answer(orig, dest) } },
   });
 
-  cg.currentPuzzle = puzzle;
+  let positions = null;
+  let current = puzzle.ply;
+  let answered = false;
+  const limit = () => (positions ? (answered ? positions.length - 1 : puzzle.ply) : puzzle.ply);
 
-  async function handlePuzzleMove(orig, dest) {
+  const goTo = (idx) => {
+    if (!positions) return;
+    current = Math.max(0, Math.min(limit(), idx));
+    const onPuzzle = current === puzzle.ply && !answered;
+    cg.puzzleInstance.set({
+      fen: positions[current].fen,
+      lastMove: undefined,
+      movable: { color: onPuzzle ? puzzle.color : undefined },
+    });
+    document.getElementById("puzzlePosition").textContent = onPuzzle
+      ? "Your move. ← → step through the game, ↑ to its start."
+      : `Viewing ${current === 0 ? "the start" : `after ${moveLabel(current - 1)} ${positions[current].san}`}. ↓ returns to the ${answered ? "end of the game" : "puzzle"}.`;
+  };
+  const nav = { first: () => goTo(0), prev: () => goTo(current - 1), next: () => goTo(current + 1), last: () => goTo(limit()) };
+  main.querySelectorAll("[data-nav]").forEach((b) => b.addEventListener("click", nav[b.dataset.nav]));
+  bindMoveKeys("#/puzzles", nav);
+
+  api.get(`/api/games/${encodeURIComponent(puzzle.game_id)}`).then((detail) => {
+    positions = detail.positions;
+    goTo(current);
+  }).catch(() => {
+    document.getElementById("puzzlePosition").textContent = "Game moves unavailable; the puzzle still works.";
+  });
+
+  async function answer(orig, dest) {
     const piece = cg.puzzleInstance.state.pieces.get(dest);
     const promotes = piece && piece.role === "pawn" && (dest[1] === "8" || dest[1] === "1");
-    const uci = `${orig}${dest}${promotes ? "q" : ""}`;
-    const msgEl = document.getElementById("puzzleMessage");
-    const nextBtn = document.getElementById("nextPuzzleBtn");
-
+    const message = document.getElementById("puzzleMessage");
     try {
-      const result = await api.post(`/api/puzzles/${puzzle.id}/answer`, { move: uci });
-
+      const result = await api.post(`/api/puzzles/${encodeURIComponent(puzzle.id)}/answer`, {
+        move: `${orig}${dest}${promotes ? "q" : ""}`,
+      });
       if (!result.legal) {
-        msgEl.textContent = "Not a legal move, try again.";
-        msgEl.className = "puzzle-message error";
+        message.textContent = "Not a legal move, try again.";
+        message.className = "puzzle-message error";
         cg.puzzleInstance.set({ fen: puzzle.fen, lastMove: undefined });
-      } else if (result.correct) {
-        msgEl.textContent = `Correct! ${result.solution_san}`;
-        msgEl.className = "puzzle-message success";
-        if (cg.puzzleInstance) cg.puzzleInstance.set({ viewOnly: true });
-        nextBtn.style.display = "block";
-      } else {
-        msgEl.textContent = `Not quite. Best was ${result.solution_san}.`;
-        msgEl.className = "puzzle-message info";
-        const encUrl = encodeURIComponent(puzzle.game_url);
-        msgEl.innerHTML += ` <a href="#/games/${encUrl}">View game</a>`;
-        if (cg.puzzleInstance) cg.puzzleInstance.set({ viewOnly: true });
-        nextBtn.style.display = "block";
+        return;
       }
+      answered = true;
+      cg.puzzleInstance.set({ movable: { color: undefined } });
+      if (result.correct) {
+        message.textContent = `Correct! ${result.solution_san}`;
+        message.className = "puzzle-message success";
+      } else {
+        message.innerHTML = `Not quite. Best was <strong>${esc(result.solution_san)}</strong>.
+          <a href="#/games/${encodeURIComponent(puzzle.game_id)}">Review the game</a>`;
+        message.className = "puzzle-message info";
+      }
+      if (positions) {
+        document.getElementById("puzzlePosition").textContent = "Game unlocked: ← → to see how it continued, ↓ to the end.";
+      }
+      document.getElementById("nextPuzzleBtn").hidden = false;
     } catch (e) {
-      msgEl.textContent = "Error: " + e.message;
-      msgEl.className = "puzzle-message error";
+      message.textContent = `Error: ${e.message}`;
+      message.className = "puzzle-message error";
     }
   }
 
   document.getElementById("nextPuzzleBtn").addEventListener("click", () => {
-    if (state.currentPuzzleIndex < state.puzzles.length - 1) {
-      state.currentPuzzleIndex++;
-      renderPuzzles();
+    if (isLast) {
+      main.querySelector(".puzzle-info").innerHTML = '<p>Session done. Come back tomorrow for the next batch.</p>';
+      return;
     }
+    state.currentPuzzleIndex += 1;
+    renderPuzzles();
   });
 }
 
