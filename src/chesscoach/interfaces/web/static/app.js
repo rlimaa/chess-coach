@@ -595,14 +595,14 @@ function renderGames() {
 
   document.querySelectorAll(".game-row").forEach((row) => {
     row.addEventListener("click", () => {
-      const gameId = row.getAttribute("data-game-id");
-      routeTo(`games/${gameId}`);
+      location.hash = `#/games/${row.getAttribute("data-game-id")}`;
     });
   });
 
-  document.getElementById("loadMoreBtn").addEventListener("click", () => {
+  document.getElementById("loadMoreBtn").addEventListener("click", async () => {
     state.gamesOffset += 50;
-    loadGames();
+    await loadGames();
+    renderGames();
   });
 }
 
@@ -679,7 +679,7 @@ function renderGameViewer() {
   const nav = { first: () => goTo(0), prev: () => goTo(current - 1), next: () => goTo(current + 1), last: () => goTo(positions.length - 1) };
   main.querySelectorAll("[data-nav]").forEach((b) => b.addEventListener("click", nav[b.dataset.nav]));
   main.querySelectorAll("[data-idx]").forEach((el) => el.addEventListener("click", () => goTo(Number(el.dataset.idx))));
-  bindMoveKeys("#/games/", nav);
+  bindMoveKeys(nav);
   goTo(0);
 }
 
@@ -690,7 +690,7 @@ function keepInView(container, item) {
   else if (rect.bottom > box.bottom) container.scrollTop += rect.bottom - box.bottom;
 }
 
-function bindMoveKeys(route, nav) {
+function bindMoveKeys(nav) {
   const keys = {
     ArrowLeft: nav.prev,
     ArrowRight: nav.next,
@@ -700,7 +700,7 @@ function bindMoveKeys(route, nav) {
     End: nav.last,
   };
   document.onkeydown = (e) => {
-    if (!keys[e.key] || !location.hash.startsWith(route) || e.target.closest("input, textarea, select")) return;
+    if (!keys[e.key] || e.altKey || e.ctrlKey || e.metaKey || e.target.closest?.("input, textarea, select")) return;
     e.preventDefault();
     keys[e.key]();
   };
@@ -796,7 +796,7 @@ function renderPuzzles() {
   };
   const nav = { first: () => goTo(0), prev: () => goTo(current - 1), next: () => goTo(current + 1), last: () => goTo(limit()) };
   main.querySelectorAll("[data-nav]").forEach((b) => b.addEventListener("click", nav[b.dataset.nav]));
-  bindMoveKeys("#/puzzles", nav);
+  bindMoveKeys(nav);
 
   api.get(`/api/games/${encodeURIComponent(puzzle.game_id)}`).then((detail) => {
     positions = detail.positions;
@@ -1017,6 +1017,7 @@ async function routeTo(route) {
   const param = parts[1];
 
   state.currentRoute = view;
+  document.onkeydown = null;
   renderHeader();
 
   try {
