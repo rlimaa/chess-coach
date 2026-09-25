@@ -946,3 +946,7 @@ cg-board square.move-dest { background: radial-gradient(rgba(0, 0, 0, 0.14) 22%,
 .line-toggle button.active { background: var(--series-1); color: #fff; }
 .app-nav { display: flex; flex-wrap: wrap; justify-content: center; column-gap: 16px; row-gap: 6px; }
 .header-content { min-width: 0; max-width: 100%; }
+
+/* From Black's side the label squares swap colour, so the label colours must swap too. */
+.cg-wrap.orientation-black coords coord:nth-child(odd) { color: #769656; }
+.cg-wrap.orientation-black coords coord:nth-child(even) { color: #eeeed2; }
