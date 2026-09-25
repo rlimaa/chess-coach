@@ -181,7 +181,7 @@ Chess/
 - The sample is built by the nightly job: `make schedule` installs a launchd agent that runs `scripts/nightly-analysis.sh` at 20:00 (sync, then 100 rapid + 100 blitz games at depth 12 on 2 threads; a lock makes it skip while another analysis is running). One-off runs: `SINCE=2026-01-01 THREADS=10 HASH_MB=2048 scripts/nightly-analysis.sh`.
 
 **Phase 4: Coaching loop & improvement plan**
-- Puzzles from your own mistakes: every analyzed mistake or blunder (not in an already-lost position) becomes a puzzle, with the engine's best move as the solution. Spaced repetition: failed puzzles come back first, solved ones rest for 3, then 7, then 30 days. `coach puzzles [-t blitz] [-n 5]` is interactive (a board from your side, SAN or UCI answers); `--list` is non-interactive for coaching conversations.
+- Puzzles from your own mistakes: every analyzed mistake or blunder (not in an already-lost position) becomes a puzzle, with the engine's best move as the solution. Spaced repetition: missed puzzles rest 2 days and then come back first; solved ones rest for 3, then 7, then 30 days. No puzzle repeats the next day. `coach puzzles [-t blitz] [-n 5]` is interactive (a board from your side, SAN or UCI answers); `--list` is non-interactive for coaching conversations.
 - `coach progress -t <class> --days N` compares the last N days with the N before: score, rating change, time trouble, losses on time, accuracy, and mistakes + blunders per 100 moves.
 - The coaching workflow in `CLAUDE.md`: Claude runs sync/report/progress, keeps `coaching/training_plan.md` (goals, weekly focus, drills, log) and writes check-ins to `coaching/checkins/`. Personal files are gitignored.
 

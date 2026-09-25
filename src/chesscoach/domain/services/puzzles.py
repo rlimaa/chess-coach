@@ -10,6 +10,8 @@ from chesscoach.domain.value_objects import MoveClass
 MIN_WIN_PCT_FOR_PUZZLE = 15.0
 REVIEW_DAYS_BY_STREAK = {1: 3, 2: 7}
 MAX_REVIEW_DAYS = 30
+# A missed puzzle still comes back, but never the very next day.
+MISSED_REST_DAYS = 2
 
 
 def puzzles_from(reviews: Sequence[tuple[Game, GameAnalysis]]) -> list[Puzzle]:
@@ -63,14 +65,9 @@ def due_puzzles(
             new.append(puzzle)
         else:
             last = puzzle_attempts[-1]
-            if not last.solved:
-                failed.append((last.attempted_at, puzzle))
-            else:
-                streak = sum(1 for _ in takewhile(lambda a: a.solved, reversed(puzzle_attempts)))
-                interval_days = REVIEW_DAYS_BY_STREAK.get(streak, MAX_REVIEW_DAYS)
-                due_at = last.attempted_at + timedelta(days=interval_days)
-                if due_at <= now:
-                    due_solved.append((last.attempted_at, puzzle))
+            if last.attempted_at + timedelta(days=_rest_days(puzzle_attempts)) > now:
+                continue
+            (due_solved if last.solved else failed).append((last.attempted_at, puzzle))
 
     failed.sort(reverse=True)
     new.sort(key=lambda p: -p.win_pct_loss)
@@ -78,3 +75,10 @@ def due_puzzles(
 
     result = [p for _, p in failed] + new + [p for _, p in due_solved]
     return result[:limit]
+
+
+def _rest_days(attempts: Sequence[Attempt]) -> int:
+    streak = sum(1 for _ in takewhile(lambda a: a.solved, reversed(attempts)))
+    if streak == 0:
+        return MISSED_REST_DAYS
+    return REVIEW_DAYS_BY_STREAK.get(streak, MAX_REVIEW_DAYS)

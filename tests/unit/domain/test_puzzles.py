@@ -90,7 +90,7 @@ def _ago(days: float, solved: bool, pid: str) -> Attempt:
 
 def test_failed_puzzles_come_first_then_new_ones_biggest_blunder_first() -> None:
     puzzles = [_puzzle("new-small", 12.0), _puzzle("new-big", 50.0), _puzzle("failed")]
-    attempts = [_ago(1, False, "failed")]
+    attempts = [_ago(3, False, "failed")]
 
     due = due_puzzles(puzzles, attempts, now=NOW, limit=10)
 
@@ -119,7 +119,7 @@ def test_a_failure_resets_the_interval_and_limit_caps_the_session() -> None:
     attempts = [
         _ago(30, True, "relapsed"),
         _ago(20, True, "relapsed"),
-        _ago(0.5, False, "relapsed"),
+        _ago(2.5, False, "relapsed"),
     ]
 
     due = due_puzzles(puzzles, attempts, now=NOW, limit=2)
@@ -131,3 +131,12 @@ def test_only_the_latest_run_of_successes_counts_towards_the_interval() -> None:
     attempts = [_ago(20, True, "p"), _ago(10, False, "p"), _ago(4, True, "p")]
 
     assert [p.id for p in due_puzzles([_puzzle("p")], attempts, now=NOW, limit=5)] == ["p"]
+
+
+def test_a_missed_puzzle_rests_two_days_so_it_never_repeats_the_next_day() -> None:
+    puzzles = [_puzzle("yesterday"), _puzzle("two-days-ago")]
+    attempts = [_ago(1, False, "yesterday"), _ago(2, False, "two-days-ago")]
+
+    due = due_puzzles(puzzles, attempts, now=NOW, limit=10)
+
+    assert [p.id for p in due] == ["two-days-ago"]
