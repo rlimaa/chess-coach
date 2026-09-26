@@ -2,9 +2,10 @@
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from importlib.metadata import version
+from pathlib import Path
 
 from chesscoach.adapters.chess_rules.board_rules import PythonChessRules
 from chesscoach.adapters.chess_rules.clock_reader import PgnClockReader
@@ -15,6 +16,7 @@ from chesscoach.adapters.coaching.training_plan_file import MarkdownTrainingPlan
 from chesscoach.adapters.engine.caching import CachingEngine
 from chesscoach.adapters.engine.diagnostics import EngineProbe, probe_engine
 from chesscoach.adapters.engine.stockfish_engine import StockfishEngine
+from chesscoach.adapters.locking.directory_lock import DirectoryLock
 from chesscoach.adapters.persistence.sqlite.analysis_repository import SqliteAnalysisRepository
 from chesscoach.adapters.persistence.sqlite.database import SqliteDatabase
 from chesscoach.adapters.persistence.sqlite.evaluation_cache import SqliteEvaluationCache
@@ -44,6 +46,8 @@ from chesscoach.config import Settings
 
 ENGINE_CHECK_DEPTH = 12
 EXPLANATION_PLIES = 8
+# A lock older than this belongs to a run that crashed; the longest real run takes a few hours.
+ANALYSIS_LOCK_MAX_AGE = timedelta(hours=12)
 
 
 class Container:
@@ -152,6 +156,13 @@ class Container:
             games=SqliteGameRepository(self._database),
             analyses=SqliteAnalysisRepository(self._database),
         )
+
+    def analysis_lock(self) -> DirectoryLock:
+        return DirectoryLock(self.data_dir / ".analysis.lock", max_age=ANALYSIS_LOCK_MAX_AGE)
+
+    @property
+    def data_dir(self) -> Path:
+        return self.settings.db_path.parent
 
     def get_repertoire(self) -> GetRepertoire:
         return GetRepertoire(JsonRepertoireFile(self.settings.repertoire_path), PythonChessRules())

@@ -43,7 +43,7 @@ to talk through specific positions (never reveal a solution before the user trie
 - `make check`: ruff + mypy --strict + lint-imports + pytest, inside the dev container.
 - Narrowest test: `docker compose run --rm dev pytest tests/<path>::<test> -q`
 - CLI: `docker compose run --rm coach <command>`: `engine-check`, `sync`, `stats`, `analyze`,
-  `game`, `report`, `puzzles`, `progress`, `web` (dashboard: `make web`, http://localhost:8000).
+  `game`, `report`, `puzzles`, `progress`, `nightly`, `scheduler`, `web` (dashboard: `make web`, http://localhost:8000).
 - `make lock`: refresh `uv.lock` after changing dependencies in `pyproject.toml`.
 
 ## Architecture rules (Clean Architecture, enforced by `lint-imports`)

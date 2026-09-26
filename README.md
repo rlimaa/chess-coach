@@ -28,7 +28,7 @@ make analyze                # Stockfish analysis of recent games
 make report                 # rapid + blitz coaching reports in reports/
 make puzzles                # puzzles from your own mistakes (TC=blitz to filter)
 make progress               # last 30 days vs the 30 before (TC=rapid|blitz)
-make schedule               # nightly sync + analysis at 20:00 (macOS launchd)
+make schedule               # scheduler container: nightly sync + analysis at 20:00
 docker compose run --rm coach --help
 ```
 

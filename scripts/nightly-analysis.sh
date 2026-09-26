@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sync new games, then analyze a batch of each time class. Scheduled by scripts/schedule-nightly.sh.
+# One-off analysis runs from the host (the nightly job runs in the scheduler container).
 # One-off runs: SINCE=2026-01-01 THREADS=10 HASH_MB=2048 scripts/nightly-analysis.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -14,17 +14,16 @@ HASH_MB="${HASH_MB:-256}"
 TIME_CLASSES="${TIME_CLASSES:-rapid blitz}"
 SINCE="${SINCE:-}"
 
-# A second run (e.g. the nightly job during a long one-off run) would fight for CPU and the database.
+# Shared with the scheduler container, so a pid can't identify the holder: a lock younger than
+# 12 hours is live, an older one is left over from a crashed run.
 LOCK_DIR="data/.analysis.lock"
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-  holder="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
-  if [ -n "$holder" ] && kill -0 "$holder" 2>/dev/null; then
-    echo "=== $(date '+%Y-%m-%d %H:%M:%S') skipped: analysis already running (pid $holder) ==="
+  if [ -n "$(find "$LOCK_DIR" -maxdepth 0 -mmin -720)" ]; then
+    echo "=== $(date '+%Y-%m-%d %H:%M:%S') skipped: another analysis is running ==="
     exit 0
   fi
   rm -rf "$LOCK_DIR" && mkdir "$LOCK_DIR"
 fi
-echo $$ > "$LOCK_DIR/pid"
 trap 'rm -rf "$LOCK_DIR"' EXIT
 
 echo "=== $(date '+%Y-%m-%d %H:%M:%S') analysis (threads=$THREADS depth=$DEPTH) ==="

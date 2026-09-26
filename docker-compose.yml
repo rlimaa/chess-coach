@@ -40,3 +40,18 @@ services:
         required: false
     volumes:
       - ./:/app
+
+  scheduler:
+    image: chess-coach:latest
+    command: ["scheduler", "--at", "20:00"]
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      ENGINE__THREADS: "2"
+    volumes:
+      - ./data:/app/data
+      - ./reports:/app/reports
+      - ./config.toml:/app/config.toml:ro
+      - ./coaching:/app/coaching:ro

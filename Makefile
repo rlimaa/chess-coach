@@ -42,11 +42,11 @@ progress: ## Last 30 days vs the 30 before (TC=blitz by default)
 web: ## Dashboard on http://localhost:8000
 	docker compose up web
 
-schedule: ## Run sync + analysis nightly on macOS (HOUR=20 by default)
-	./scripts/schedule-nightly.sh install
+schedule: ## Start the scheduler container (nightly sync + analysis at 20:00)
+	docker compose up -d scheduler
 
-unschedule: ## Remove the nightly job
-	./scripts/schedule-nightly.sh uninstall
+unschedule: ## Stop the scheduler container
+	docker compose stop scheduler
 
 ifeq ($(IN_CONTAINER),1)
 check: lint typecheck arch test ## Run every quality gate

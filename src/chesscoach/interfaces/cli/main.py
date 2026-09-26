@@ -1,4 +1,5 @@
-from datetime import datetime
+import time as clock
+from datetime import date, datetime, time
 from typing import Annotated
 
 import typer
@@ -13,6 +14,7 @@ from chesscoach.application.errors import (
     GameSourceError,
     PlayerNotFoundError,
 )
+from chesscoach.application.scheduling import is_due
 from chesscoach.config import load_settings
 from chesscoach.container import Container
 from chesscoach.domain.value_objects import TimeClass
@@ -65,7 +67,10 @@ def engine_check() -> None:
 def sync(username: UsernameOption = None) -> None:
     """Import your games from chess.com (only new months after the first run)."""
     container = _container()
-    player = _resolve_username(container, username)
+    _sync(container, _resolve_username(container, username))
+
+
+def _sync(container: Container, player: str) -> None:
     try:
         with console.status(f"Syncing games of {player} from chess.com..."):
             report = container.sync_games().execute(player)
@@ -220,3 +225,66 @@ def web(
 ) -> None:
     """Run the web dashboard."""
     uvicorn.run(create_app(_container()), host=host, port=port)
+
+
+NIGHTLY_TIME_CLASSES = (TimeClass.RAPID, TimeClass.BLITZ)
+GamesOption = Annotated[int, typer.Option("--games", help="Games to analyze per time class.")]
+DepthOption = Annotated[int, typer.Option("--depth", help="Engine depth.")]
+
+
+@app.command()
+def nightly(
+    username: UsernameOption = None, games: GamesOption = 100, depth: DepthOption = 12
+) -> None:
+    """Sync new games, then analyze a batch of rapid and blitz games."""
+    container = _container()
+    _run_nightly(container, _resolve_username(container, username), games, depth)
+
+
+def _run_nightly(container: Container, player: str, games: int, depth: int) -> bool:
+    with container.analysis_lock().hold() as acquired:
+        if not acquired:
+            console.print("Skipped: another analysis is running.")
+            return False
+        try:
+            _sync(container, player)
+        except typer.Exit:
+            console.print("Sync failed; analyzing the games already stored.")
+        with container.analysis_session() as analyze_games:
+            for time_class in NIGHTLY_TIME_CLASSES:
+                report = analyze_games.execute(
+                    player, limit=games, depth=depth, only=GameFilter(time_class)
+                )
+                console.print(
+                    f"{time_class.value}: analyzed {report.analyzed} "
+                    f"({report.still_pending} still pending)"
+                )
+        return True
+
+
+@app.command()
+def scheduler(
+    at: Annotated[
+        str, typer.Option("--at", help="Daily run time, HH:MM in your TIMEZONE.")
+    ] = "20:00",
+    games: GamesOption = 100,
+    depth: DepthOption = 12,
+    once: Annotated[bool, typer.Option("--once", help="Check once and exit.")] = False,
+) -> None:
+    """Run `nightly` once a day at the given time; meant to run in the scheduler container."""
+    container = _container()
+    player = _resolve_username(container, username=None)
+    run_at = time.fromisoformat(at)
+    state = container.data_dir / "scheduler-last-run"
+    zone = container.settings.timezone
+    console.print(f"Scheduler: nightly analysis at {run_at:%H:%M} ({zone.key})")
+    while True:
+        now = datetime.now(zone)
+        last_run = date.fromisoformat(state.read_text().strip()) if state.exists() else None
+        if is_due(now, run_at, last_run):
+            console.print(f"{now:%Y-%m-%d %H:%M} starting nightly run")
+            if _run_nightly(container, player, games, depth):
+                state.write_text(now.date().isoformat())
+        if once:
+            return
+        clock.sleep(60)
