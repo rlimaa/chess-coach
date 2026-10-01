@@ -30,6 +30,14 @@ UsernameOption = Annotated[
 TimeClassOption = Annotated[
     TimeClass | None, typer.Option("--time-class", "-t", help="Only this time class.")
 ]
+SinceOption = Annotated[
+    datetime | None,
+    typer.Option(
+        "--since",
+        help="Only games played on or after this date (YYYY-MM-DD).",
+        formats=["%Y-%m-%d"],
+    ),
+]
 
 
 def _container() -> Container:
@@ -100,14 +108,7 @@ def analyze(
         int | None, typer.Option("--depth", "-d", help="Engine depth (default: from config).")
     ] = None,
     time_class: TimeClassOption = None,
-    since: Annotated[
-        datetime | None,
-        typer.Option(
-            "--since",
-            help="Only games played on or after this date (YYYY-MM-DD).",
-            formats=["%Y-%m-%d"],
-        ),
-    ] = None,
+    since: SinceOption = None,
 ) -> None:
     """Analyze your most recent unanalyzed games with Stockfish."""
     container = _container()
@@ -234,14 +235,19 @@ DepthOption = Annotated[int, typer.Option("--depth", help="Engine depth.")]
 
 @app.command()
 def nightly(
-    username: UsernameOption = None, games: GamesOption = 100, depth: DepthOption = 12
+    username: UsernameOption = None,
+    games: GamesOption = 100,
+    depth: DepthOption = 12,
+    since: SinceOption = None,
 ) -> None:
     """Sync new games, then analyze a batch of rapid and blitz games."""
     container = _container()
-    _run_nightly(container, _resolve_username(container, username), games, depth)
+    _run_nightly(container, _resolve_username(container, username), games, depth, since)
 
 
-def _run_nightly(container: Container, player: str, games: int, depth: int) -> bool:
+def _run_nightly(
+    container: Container, player: str, games: int, depth: int, since: datetime | None
+) -> bool:
     with container.analysis_lock().hold() as acquired:
         if not acquired:
             console.print("Skipped: another analysis is running.")
@@ -253,7 +259,10 @@ def _run_nightly(container: Container, player: str, games: int, depth: int) -> b
         with container.analysis_session() as analyze_games:
             for time_class in NIGHTLY_TIME_CLASSES:
                 report = analyze_games.execute(
-                    player, limit=games, depth=depth, only=GameFilter(time_class)
+                    player,
+                    limit=games,
+                    depth=depth,
+                    only=GameFilter(time_class, since.date() if since else None),
                 )
                 console.print(
                     f"{time_class.value}: analyzed {report.analyzed} "
@@ -269,6 +278,7 @@ def scheduler(
     ] = "20:00",
     games: GamesOption = 100,
     depth: DepthOption = 12,
+    since: SinceOption = None,
     once: Annotated[bool, typer.Option("--once", help="Check once and exit.")] = False,
 ) -> None:
     """Run `nightly` once a day at the given time; meant to run in the scheduler container."""
@@ -283,7 +293,7 @@ def scheduler(
         last_run = date.fromisoformat(state.read_text().strip()) if state.exists() else None
         if is_due(now, run_at, last_run):
             console.print(f"{now:%Y-%m-%d %H:%M} starting nightly run")
-            if _run_nightly(container, player, games, depth):
+            if _run_nightly(container, player, games, depth, since):
                 state.write_text(now.date().isoformat())
         if once:
             return

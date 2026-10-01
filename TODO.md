@@ -34,6 +34,7 @@
 
 ## Phase 3b — Engine-based weaknesses
 - [ ] Build analyzed sample (nightly job: 100 rapid + 100 blitz per night), then review the first engine findings
+- [x] Nightly job skips games before 2026 (`nightly`/`scheduler --since`)
 - [x] Rules: errors by phase, blunders in time trouble, missed mates, unpunished blunders, conversion
 - [x] Engine highlights + report section (shown once ≥20 games of a time class are analyzed)
 

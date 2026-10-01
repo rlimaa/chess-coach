@@ -43,7 +43,7 @@ services:
 
   scheduler:
     image: chess-coach:latest
-    command: ["scheduler", "--at", "20:00"]
+    command: ["scheduler", "--at", "20:00", "--since", "2026-01-01"]
     restart: unless-stopped
     env_file:
       - path: .env

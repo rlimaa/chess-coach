@@ -64,3 +64,19 @@ def test_scheduler_runs_the_nightly_job_once_per_day(tmp_path: Path) -> None:
     assert "blitz: analyzed 1" in first.output
     assert (tmp_path / "scheduler-last-run").read_text().strip() == date.today().isoformat()
     assert "Synced" not in again.output
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(not STOCKFISH.exists(), reason="Stockfish binary not available")
+@respx.mock
+def test_scheduler_only_analyzes_games_since_the_given_date() -> None:
+    _mock_chesscom()
+
+    result = runner.invoke(
+        app,
+        ["scheduler", "--at", "00:00", "--once", "--since", "2026-10-01", "--depth", "6"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "rapid: analyzed 0" in result.output
+    assert "blitz: analyzed 0" in result.output
