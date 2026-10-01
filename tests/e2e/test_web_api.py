@@ -165,6 +165,16 @@ def test_dashboard_page_is_served(client: TestClient) -> None:
     assert script.headers["cache-control"] == "no-cache"
 
 
+def test_dashboard_has_a_knight_favicon(client: TestClient) -> None:
+    page = client.get("/").text
+
+    link = re.search(r'<link rel="icon" type="image/svg\+xml" href="([^"]+)"', page)
+    assert link is not None
+    icon = client.get(link.group(1))
+    assert icon.status_code == 200
+    assert icon.headers["content-type"].startswith("image/svg+xml")
+
+
 def test_game_detail_accepts_the_full_chesscom_url(client: TestClient) -> None:
     response = client.get(f"/api/games/{BLITZ['url']}")
 
